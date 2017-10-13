@@ -108,7 +108,6 @@ void loop()
       break;
 
     case STATE_PROCESS_BATCH:
-      if (state != STATE_PROCESS_BATCH) Serial.println("->STATE_PROCESS_BATCH");
       if (bitcounter >= 32)
       {
         bitcounter = 0;
