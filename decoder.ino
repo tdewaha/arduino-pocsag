@@ -196,7 +196,7 @@ unsigned long extract_address(int idx)
   int pos = (idx - (idx/8) * 8)/2;
   for(int i = 1; i < 19; i++)
   {
-     bitWrite(address, 22-i, bitRead(wordbuffer[idx], 32-i));   
+     bitWrite(address, 21-i, bitRead(wordbuffer[idx], 31-i));   
   }
   bitWrite(address, 0, bitRead((pos), 0));
   bitWrite(address, 1, bitRead((pos), 1));
