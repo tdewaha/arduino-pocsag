@@ -75,3 +75,16 @@ void disable_led()
 {
   CLR(PORTD, ledPin);
 }
+
+char checkUmlaut(byte ascii) {
+  switch (ascii) {
+    case '{': return  0x84; break; // ä
+    case '|': return  0x94; break; // ö
+    case '}': return  0x81; break; // ü
+    case '[': return  0x8E; break; // Ä
+    case ']': return  0x99; break; // Ü
+    case '\\': return  0x9A; break; // Ö
+    case '~' : return  0xE0; break; // ß
+    default:  return  ascii; break;
+  }
+}

@@ -16,8 +16,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 **/
-#include <Adafruit_GFX.h>
-#include <Adafruit_ST7735.h>
+//#include <Adafruit_GFX.h>
+//#include <Adafruit_ST7735.h>
 #include <SPI.h>
 #include <TimerOne.h>
 #define receiverPin 3
@@ -52,7 +52,7 @@ unsigned long wordbuffer[81];
 #define cs   10
 #define dc   9
 #define rst  12
-Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, rst);
+//Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, rst);
 
 void setup()
 {
@@ -60,7 +60,7 @@ void setup()
   pinMode(triggerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
-  Serial.print("STATE_WAIT_FOR_PRMB");
+  Serial.println("START");
   //initScreen();
   disable_trigger();
   disable_led();
@@ -75,7 +75,7 @@ void loop()
     case STATE_WAIT_FOR_PRMB:
       if (buffer == prmbWord)
       {
-        Serial.print(" ->PREAMBLE DETECTED");
+        Serial.print(".");
         state = STATE_WAIT_FOR_SYNC;
         enable_trigger();
       }
@@ -84,7 +84,7 @@ void loop()
     case STATE_WAIT_FOR_SYNC:
       if (buffer == syncWord)
       {
-        Serial.print("\nSYNC");
+        Serial.print("!");
         enable_led();
         bitcounter = 0;
         state = STATE_PROCESS_BATCH;
@@ -95,13 +95,13 @@ void loop()
           if (batchcounter > 0)
           {
             if (state != STATE_PROCESS_MESSAGE) {
-              Serial.print(" ->STATE_PROCESS_MESSAGE");
+              //Serial.print(" ->STATE_PROCESS_MESSAGE");
               disable_led();
               disable_trigger();
             }
             state = STATE_PROCESS_MESSAGE;
           } else {
-            if (state != STATE_WAIT_FOR_PRMB) Serial.print("\nSTATE_WAIT_FOR_PRMB");
+            //if (state != STATE_WAIT_FOR_PRMB) Serial.print("\r\nSTATE_WAIT_FOR_PRMB");
             state = STATE_WAIT_FOR_PRMB;
             disable_trigger();
             disable_led();
@@ -123,20 +123,20 @@ void loop()
       {
         wordcounter = 0;
         framecounter++;
-        if (framecounter == 1)
-          Serial.print("\nFRAME-Counter .");
-        else
-          Serial.print(".");
+        /*if (framecounter == 1)
+          Serial.print("\r\nFRAME-Counter .");
+          else
+          Serial.print(".");*/
       }
 
       if (framecounter >= 8)
       {
         framecounter = 0;
         batchcounter++;
-        if (batchcounter == 1)
-          Serial.print("\nBATCH-Counter .");
-        else
-          Serial.print(".");
+        /*if (batchcounter == 1)
+          Serial.print("\r\nBATCH-Counter .");
+          else
+          Serial.print(".");*/
         state = STATE_WAIT_FOR_SYNC;
       }
 
@@ -148,15 +148,16 @@ void loop()
       break;
 
     case STATE_PROCESS_MESSAGE:
-      Serial.print("\nSTATE_PROCESS_MESSAGE");
+      //Serial.print("\r\nSTATE_PROCESS_MESSAGE");
       stop_flank();
       stop_timer();
 
       decode_wordbuffer();
 
       memset(wordbuffer, 0, sizeof(wordbuffer));
-      state = STATE_WAIT_FOR_PRMB;
-      Serial.print(" ->STATE_WAIT_FOR_PRMB\n");
+      //state = STATE_WAIT_FOR_PRMB;
+      state = STATE_WAIT_FOR_SYNC;
+      //Serial.print(" ->STATE_WAIT_FOR_PRMB\r\n");
       disable_trigger();
       disable_led();
       start_flank();
@@ -200,12 +201,12 @@ void decode_wordbuffer()
           {
             if (character == 4) {
               eot = true;
-              Serial.print("\nEOT Detected!");
+              Serial.print("<EOT>");
             }
             bcounter = 0;
             if (eot == false)
             {
-              message[ccounter] = character;
+              message[ccounter] = checkUmlaut(character);
               ccounter++;
             }
           }
@@ -222,18 +223,20 @@ void decode_wordbuffer()
 
 void print_message(unsigned long address, byte function, char message[MSGLENGTH])
 {
-  //if (address < 1000000) Serial.print("0");
-  Serial.print("\n");
+  Serial.print("\r\n");
   Serial.print(address);
   Serial.print("\t");
   Serial.print(functions[function]);
   Serial.print("\t");
   Serial.println(message);
-  }
+  Serial.print("\r\n");
+}
 
 unsigned long extract_address(int idx) {
   unsigned long address = 0;
-  int pos = (idx - (idx / 8) * 8) / 2;
+  int pos = idx / 2;// (idx - (idx / 8) * 8) / 2;
+  //Serial.print("\nidx = "+String(idx)+" pos = "+String(pos)+"(");
+
   for (int i = 1; i < 19; i++)
   {
     bitWrite(address, 21 - i, bitRead(wordbuffer[idx], 31 - i));
@@ -241,6 +244,11 @@ unsigned long extract_address(int idx) {
   bitWrite(address, 0, bitRead((pos), 0));
   bitWrite(address, 1, bitRead((pos), 1));
   bitWrite(address, 2, bitRead((pos), 2));
+
+  //Serial.print(String(bitRead((pos), 0)));
+  //Serial.print(String(bitRead((pos), 1)));
+  //Serial.print(String(bitRead((pos), 2)));
+  //Serial.print(")");
 
   return address;
 }

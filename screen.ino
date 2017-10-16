@@ -1,4 +1,4 @@
-void initScreen() {
+/*void initScreen() {
   tft.initR(INITR_GREENTAB);
   tft.fillScreen(ST7735_BLACK);
   tft.setRotation(3);
@@ -8,18 +8,6 @@ void initScreen() {
   tft.setTextSize(1);
 }
 
-char checkUmlaut(byte ascii) {
-  switch (ascii) {
-    case '{': return  0x84; break; // ä
-    case '|': return  0x94; break; // ö
-    case '}': return  0x81; break; // ü
-    case '[': return  0x8E; break; // Ä
-    case ']': return  0x99; break; // Ü
-    case '\\': return  0x9A; break; // Ö
-    case '~' : return  0xE0; break; // ß
-    default:  return  ascii; break;
-  }
-}
 String convert_tft_message(char message[MSGLENGTH], int msglen) {
   String msg = "";
   for (int i=0; i < msglen; i++) {
@@ -54,5 +42,4 @@ void tft_message(unsigned long address, byte function, char message[MSGLENGTH], 
   text += convert_tft_message(message,msglen);
   tft.print(text);
 
-}
-
+}*/
