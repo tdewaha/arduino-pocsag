@@ -22,7 +22,7 @@
 #include <TimerOne.h>
 #define receiverPin 3
 #define triggerPin 6
-#define ledPin 13
+#define ledPin 7
 #define bitPeriod 833
 #define halfBitPeriod 416
 #define prmbWord 1431655765
@@ -33,7 +33,7 @@
 #define STATE_WAIT_FOR_SYNC 1
 #define STATE_PROCESS_BATCH 2
 #define STATE_PROCESS_MESSAGE 3
-#define MSGLENGTH 240
+#define MSGLENGTH 320
 
 static const char *functions[4] = {"A", "B", "C", "D"};
 
@@ -60,10 +60,10 @@ void setup()
   pinMode(triggerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
-  Serial.println("->STATE_WAIT_FOR_PRMB");
-  initScreen();
+  Serial.print("STATE_WAIT_FOR_PRMB");
+  //initScreen();
   disable_trigger();
-  //enable_led();
+  disable_led();
   start_flank();
   Timer1.initialize(bitPeriod);
 }
@@ -75,16 +75,17 @@ void loop()
     case STATE_WAIT_FOR_PRMB:
       if (buffer == prmbWord)
       {
-        Serial.println("PREAMBLE DETECTED");
-        digitalWrite(ledPin, HIGH);
+        Serial.print(" ->PREAMBLE DETECTED");
         state = STATE_WAIT_FOR_SYNC;
+        enable_trigger();
       }
       break;
 
     case STATE_WAIT_FOR_SYNC:
       if (buffer == syncWord)
       {
-        Serial.println("SYNC");
+        Serial.print("\nSYNC");
+        enable_led();
         bitcounter = 0;
         state = STATE_PROCESS_BATCH;
       } else {
@@ -94,13 +95,16 @@ void loop()
           if (batchcounter > 0)
           {
             if (state != STATE_PROCESS_MESSAGE) {
-              Serial.println("->STATE_PROCESS_MESSAGE");
-              digitalWrite(ledPin, LOW);
+              Serial.print(" ->STATE_PROCESS_MESSAGE");
+              disable_led();
+              disable_trigger();
             }
             state = STATE_PROCESS_MESSAGE;
           } else {
-            if (state != STATE_WAIT_FOR_PRMB) Serial.println("->STATE_WAIT_FOR_PRMB");
+            if (state != STATE_WAIT_FOR_PRMB) Serial.print("\nSTATE_WAIT_FOR_PRMB");
             state = STATE_WAIT_FOR_PRMB;
+            disable_trigger();
+            disable_led();
           }
           batchcounter = 0;
         }
@@ -108,7 +112,6 @@ void loop()
       break;
 
     case STATE_PROCESS_BATCH:
-      if (state != STATE_PROCESS_BATCH) Serial.println("->STATE_PROCESS_BATCH");
       if (bitcounter >= 32)
       {
         bitcounter = 0;
@@ -120,12 +123,20 @@ void loop()
       {
         wordcounter = 0;
         framecounter++;
+        if (framecounter == 1)
+          Serial.print("\nFRAME-Counter .");
+        else
+          Serial.print(".");
       }
 
       if (framecounter >= 8)
       {
         framecounter = 0;
         batchcounter++;
+        if (batchcounter == 1)
+          Serial.print("\nBATCH-Counter .");
+        else
+          Serial.print(".");
         state = STATE_WAIT_FOR_SYNC;
       }
 
@@ -137,7 +148,7 @@ void loop()
       break;
 
     case STATE_PROCESS_MESSAGE:
-      Serial.println("STATE_PROCESS_MESSAGE");
+      Serial.print("\nSTATE_PROCESS_MESSAGE");
       stop_flank();
       stop_timer();
 
@@ -145,8 +156,9 @@ void loop()
 
       memset(wordbuffer, 0, sizeof(wordbuffer));
       state = STATE_WAIT_FOR_PRMB;
-      if (state != STATE_WAIT_FOR_PRMB) Serial.println("->STATE_WAIT_FOR_PRMB");
-
+      Serial.print(" ->STATE_WAIT_FOR_PRMB\n");
+      disable_trigger();
+      disable_led();
       start_flank();
       break;
   }
@@ -186,7 +198,10 @@ void decode_wordbuffer()
           bcounter++;
           if (bcounter >= 7)
           {
-            if (character == 4) eot = true;
+            if (character == 4) {
+              eot = true;
+              Serial.print("\nEOT Detected!");
+            }
             bcounter = 0;
             if (eot == false)
             {
@@ -198,24 +213,23 @@ void decode_wordbuffer()
       }
     }
   }
-  if (address != 0 && String(address).startsWith("19"))
+  if (address != 0)//&& String(address).startsWith("19"))
   {
     print_message(address, function, message);
-    tft_message(address, function, message, ccounter);
+    //tft_message(address, function, message, ccounter);
   }
 }
 
 void print_message(unsigned long address, byte function, char message[MSGLENGTH])
 {
-  //Serial.begin(115200);
-  if (address < 1000000) Serial.print("0");
+  //if (address < 1000000) Serial.print("0");
+  Serial.print("\n");
   Serial.print(address);
   Serial.print("\t");
   Serial.print(functions[function]);
   Serial.print("\t");
   Serial.println(message);
-  // Serial.end();
-}
+  }
 
 unsigned long extract_address(int idx) {
   unsigned long address = 0;
