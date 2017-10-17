@@ -75,7 +75,7 @@ void loop()
     case STATE_WAIT_FOR_PRMB:
       if (buffer == prmbWord)
       {
-        Serial.print(".");
+        Serial.print("P");
         state = STATE_WAIT_FOR_SYNC;
         enable_trigger();
       }
@@ -84,7 +84,7 @@ void loop()
     case STATE_WAIT_FOR_SYNC:
       if (buffer == syncWord)
       {
-        Serial.print("!");
+        Serial.print("S");
         enable_led();
         bitcounter = 0;
         state = STATE_PROCESS_BATCH;
@@ -95,13 +95,12 @@ void loop()
           if (batchcounter > 0)
           {
             if (state != STATE_PROCESS_MESSAGE) {
-              //Serial.print(" ->STATE_PROCESS_MESSAGE");
               disable_led();
               disable_trigger();
             }
             state = STATE_PROCESS_MESSAGE;
           } else {
-            //if (state != STATE_WAIT_FOR_PRMB) Serial.print("\r\nSTATE_WAIT_FOR_PRMB");
+            if (state != STATE_WAIT_FOR_PRMB) Serial.print("wP");
             state = STATE_WAIT_FOR_PRMB;
             disable_trigger();
             disable_led();
@@ -112,6 +111,7 @@ void loop()
       break;
 
     case STATE_PROCESS_BATCH:
+      Serial.print("B");
       if (bitcounter >= 32)
       {
         bitcounter = 0;
@@ -123,20 +123,12 @@ void loop()
       {
         wordcounter = 0;
         framecounter++;
-        /*if (framecounter == 1)
-          Serial.print("\r\nFRAME-Counter .");
-          else
-          Serial.print(".");*/
       }
 
       if (framecounter >= 8)
       {
         framecounter = 0;
         batchcounter++;
-        /*if (batchcounter == 1)
-          Serial.print("\r\nBATCH-Counter .");
-          else
-          Serial.print(".");*/
         state = STATE_WAIT_FOR_SYNC;
       }
 
@@ -148,7 +140,7 @@ void loop()
       break;
 
     case STATE_PROCESS_MESSAGE:
-      //Serial.print("\r\nSTATE_PROCESS_MESSAGE");
+      Serial.print("M");
       stop_flank();
       stop_timer();
 
@@ -157,7 +149,7 @@ void loop()
       memset(wordbuffer, 0, sizeof(wordbuffer));
       //state = STATE_WAIT_FOR_PRMB;
       state = STATE_WAIT_FOR_SYNC;
-      //Serial.print(" ->STATE_WAIT_FOR_PRMB\r\n");
+      Serial.print("wS");
       disable_trigger();
       disable_led();
       start_flank();
@@ -214,7 +206,7 @@ void decode_wordbuffer()
       }
     }
   }
-  if (address != 0)//&& String(address).startsWith("19"))
+  if (address != 0 && String(address).startsWith("19"))
   {
     print_message(address, function, message);
     //tft_message(address, function, message, ccounter);
@@ -235,7 +227,6 @@ void print_message(unsigned long address, byte function, char message[MSGLENGTH]
 unsigned long extract_address(int idx) {
   unsigned long address = 0;
   int pos = idx / 2;// (idx - (idx / 8) * 8) / 2;
-  //Serial.print("\nidx = "+String(idx)+" pos = "+String(pos)+"(");
 
   for (int i = 1; i < 19; i++)
   {
@@ -244,11 +235,6 @@ unsigned long extract_address(int idx) {
   bitWrite(address, 0, bitRead((pos), 0));
   bitWrite(address, 1, bitRead((pos), 1));
   bitWrite(address, 2, bitRead((pos), 2));
-
-  //Serial.print(String(bitRead((pos), 0)));
-  //Serial.print(String(bitRead((pos), 1)));
-  //Serial.print(String(bitRead((pos), 2)));
-  //Serial.print(")");
 
   return address;
 }
