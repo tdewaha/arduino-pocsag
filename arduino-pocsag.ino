@@ -89,7 +89,7 @@ void loop()
         bitcounter = 0;
         state = STATE_PROCESS_BATCH;
       } else {
-        if (bitcounter > 540)   // SYNC word did not appear, going back to idle mode
+        if (bitcounter > 544)   // orig: 540 // SYNC word did not appear, going back to idle mode
         {
           bitcounter = 0;
           if (batchcounter > 0)
@@ -100,7 +100,7 @@ void loop()
             }
             state = STATE_PROCESS_MESSAGE;
           } else {
-            if (state != STATE_WAIT_FOR_PRMB) Serial.print("wP");
+            if (state != STATE_WAIT_FOR_PRMB) Serial.print("-P");
             state = STATE_WAIT_FOR_PRMB;
             disable_trigger();
             disable_led();
@@ -111,7 +111,6 @@ void loop()
       break;
 
     case STATE_PROCESS_BATCH:
-      Serial.print("B");
       if (bitcounter >= 32)
       {
         bitcounter = 0;
@@ -147,9 +146,9 @@ void loop()
       decode_wordbuffer();
 
       memset(wordbuffer, 0, sizeof(wordbuffer));
-      //state = STATE_WAIT_FOR_PRMB;
-      state = STATE_WAIT_FOR_SYNC;
-      Serial.print("wS");
+      state = STATE_WAIT_FOR_PRMB;
+      //state = STATE_WAIT_FOR_SYNC;
+      Serial.print("-P");
       disable_trigger();
       disable_led();
       start_flank();
