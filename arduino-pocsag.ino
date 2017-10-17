@@ -100,7 +100,7 @@ void loop()
             }
             state = STATE_PROCESS_MESSAGE;
           } else {
-            if (state != STATE_WAIT_FOR_PRMB) Serial.print("-P");
+            if (state != STATE_WAIT_FOR_PRMB) Serial.print("- ");
             state = STATE_WAIT_FOR_PRMB;
             disable_trigger();
             disable_led();
@@ -148,7 +148,7 @@ void loop()
       memset(wordbuffer, 0, sizeof(wordbuffer));
       state = STATE_WAIT_FOR_PRMB;
       //state = STATE_WAIT_FOR_SYNC;
-      Serial.print("-P");
+      Serial.print("-   ");
       disable_trigger();
       disable_led();
       start_flank();
