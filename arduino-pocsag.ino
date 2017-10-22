@@ -33,7 +33,6 @@
 #define STATE_WAIT_FOR_SYNC 1
 #define STATE_PROCESS_BATCH 2
 #define STATE_PROCESS_MESSAGE 3
-#define MSGLENGTH 320
 
 static const char *functions[4] = {"A", "B", "C", "D"};
 
@@ -89,7 +88,7 @@ void loop()
         bitcounter = 0;
         state = STATE_PROCESS_BATCH;
       } else {
-        if (bitcounter > 544)   // orig: 540 // SYNC word did not appear, going back to idle mode
+        if (bitcounter > 540)
         {
           bitcounter = 0;
           if (batchcounter > 0)
@@ -147,7 +146,6 @@ void loop()
 
       memset(wordbuffer, 0, sizeof(wordbuffer));
       state = STATE_WAIT_FOR_PRMB;
-      //state = STATE_WAIT_FOR_SYNC;
       Serial.print("-   ");
       disable_trigger();
       disable_led();
@@ -160,7 +158,7 @@ void decode_wordbuffer()
 {
   unsigned long address = 0;
   byte function = 0;
-  char message[MSGLENGTH];
+  char message[160];
   memset(message, 0, sizeof(message));
   byte character = 0;
   int bcounter = 0;
@@ -182,7 +180,7 @@ void decode_wordbuffer()
         eot = false;
       }
     } else {
-      if (address != 0 && ccounter < MSGLENGTH)
+      if (address != 0 && ccounter < 160)
       {
         for (int c = 30; c > 10; c--)
         {
@@ -212,7 +210,7 @@ void decode_wordbuffer()
   }
 }
 
-void print_message(unsigned long address, byte function, char message[MSGLENGTH])
+void print_message(unsigned long address, byte function, char message[160])
 {
   Serial.print("\r\n");
   Serial.print(address);
