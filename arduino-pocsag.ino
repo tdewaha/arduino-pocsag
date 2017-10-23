@@ -16,24 +16,23 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 **/
-//#include <Adafruit_GFX.h>
-//#include <Adafruit_ST7735.h>
-#include <SPI.h>
 #include <TimerOne.h>
-#define receiverPin 3
-#define triggerPin 6
-#define ledPin 7
+#define receiverPin 	3
+#define triggerPin 	6
+#define ledPin 		7
 #define bitPeriod 833
 #define halfBitPeriod 416
 #define prmbWord 1431655765
 #define syncWord 2094142936
 #define idleWord 2055848343
 
-#define STATE_WAIT_FOR_PRMB 0
-#define STATE_WAIT_FOR_SYNC 1
-#define STATE_PROCESS_BATCH 2
-#define STATE_PROCESS_MESSAGE 3
+#define STATE_WAIT_FOR_PRMB 	0
+#define STATE_WAIT_FOR_SYNC 	1
+#define STATE_PROCESS_BATCH 	2
+#define STATE_PROCESS_MESSAGE 	3
 
+#define MSGLENGTH 		240
+#define BITCOUNTERLENGTH	544
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
@@ -45,22 +44,13 @@ int batchcounter = 0;
 
 unsigned long wordbuffer[81];
 
-//Displaydeklaration
-#define sclk 13
-#define mosi 11
-#define cs   10
-#define dc   9
-#define rst  12
-//Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, rst);
-
 void setup()
 {
   pinMode(receiverPin, INPUT_PULLUP);
   pinMode(triggerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
-  Serial.println("START");
-  //initScreen();
+  Serial.println("START (MSGLENGTH = "+String(MSGLENGTH)+", BITCOUNTERLENGTH = "+String(BITCOUNTERLENGTH)+")");
   disable_trigger();
   disable_led();
   start_flank();
@@ -74,7 +64,6 @@ void loop()
     case STATE_WAIT_FOR_PRMB:
       if (buffer == prmbWord)
       {
-        Serial.print("P");
         state = STATE_WAIT_FOR_SYNC;
         enable_trigger();
       }
@@ -83,12 +72,11 @@ void loop()
     case STATE_WAIT_FOR_SYNC:
       if (buffer == syncWord)
       {
-        Serial.print("S");
         enable_led();
         bitcounter = 0;
         state = STATE_PROCESS_BATCH;
       } else {
-        if (bitcounter > 540)
+        if (bitcounter > BITCOUNTERLENGTH)
         {
           bitcounter = 0;
           if (batchcounter > 0)
@@ -99,7 +87,6 @@ void loop()
             }
             state = STATE_PROCESS_MESSAGE;
           } else {
-            if (state != STATE_WAIT_FOR_PRMB) Serial.print("- ");
             state = STATE_WAIT_FOR_PRMB;
             disable_trigger();
             disable_led();
@@ -138,7 +125,6 @@ void loop()
       break;
 
     case STATE_PROCESS_MESSAGE:
-      Serial.print("M");
       stop_flank();
       stop_timer();
 
@@ -146,7 +132,6 @@ void loop()
 
       memset(wordbuffer, 0, sizeof(wordbuffer));
       state = STATE_WAIT_FOR_PRMB;
-      Serial.print("-   ");
       disable_trigger();
       disable_led();
       start_flank();
@@ -158,7 +143,7 @@ void decode_wordbuffer()
 {
   unsigned long address = 0;
   byte function = 0;
-  char message[160];
+  char message[MSGLENGTH];
   memset(message, 0, sizeof(message));
   byte character = 0;
   int bcounter = 0;
@@ -180,7 +165,7 @@ void decode_wordbuffer()
         eot = false;
       }
     } else {
-      if (address != 0 && ccounter < 160)
+      if (address != 0 && ccounter < MSGLENGTH)
       {
         for (int c = 30; c > 10; c--)
         {
@@ -190,7 +175,6 @@ void decode_wordbuffer()
           {
             if (character == 4) {
               eot = true;
-              Serial.print("<EOT>");
             }
             bcounter = 0;
             if (eot == false)
@@ -203,14 +187,13 @@ void decode_wordbuffer()
       }
     }
   }
-  if (address != 0 && String(address).startsWith("19"))
+  if (address != 0)
   {
     print_message(address, function, message);
-    //tft_message(address, function, message, ccounter);
   }
 }
 
-void print_message(unsigned long address, byte function, char message[160])
+void print_message(unsigned long address, byte function, char message[MSGLENGTH])
 {
   Serial.print("\r\n");
   Serial.print(address);
@@ -277,7 +260,4 @@ void stop_flank()
 {
   detachInterrupt(1);
 }
-
-
-
 
