@@ -33,6 +33,7 @@
 
 #define MSGLENGTH 		240
 #define BITCOUNTERLENGTH	544
+#define WORDBUFFERLENGTH	90
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
@@ -42,7 +43,8 @@ int wordcounter = 0;
 int framecounter = 0;
 int batchcounter = 0;
 
-unsigned long wordbuffer[81];
+//unsigned long wordbuffer[81];
+unsigned long wordbuffer[WORDBUFFERLENGTH];
 
 void setup()
 {
@@ -50,7 +52,7 @@ void setup()
   pinMode(triggerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
-  Serial.println("START (MSGLENGTH = "+String(MSGLENGTH)+", BITCOUNTERLENGTH = "+String(BITCOUNTERLENGTH)+")");
+  Serial.println("START (MSGLENGTH = "+String(MSGLENGTH)+", BITCOUNTERLENGTH = "+String(BITCOUNTERLENGTH)+"), WORDBUFFERLENGTH = "+String(WORDBUFFERLENGTH)+")");
   disable_trigger();
   disable_led();
   start_flank();
@@ -149,8 +151,10 @@ void decode_wordbuffer()
   int bcounter = 0;
   int ccounter = 0;
   boolean eot = false;
+  int BatchCounter = 0;
+  int c = 1;
 
-  for (int i = 0; i < 81; i++)
+  for (int i = 0; i < WORDBUFFERLENGTH; i++)
   {
     if (parity(wordbuffer[i]) == 1) continue;                      // Invalid Codeword
     if (wordbuffer[i] == idleWord) continue;                       // IDLE
@@ -187,7 +191,7 @@ void decode_wordbuffer()
       }
     }
   }
-  if (address != 0)
+  if (address != 0 && String(address).startsWith("19"))
   {
     print_message(address, function, message);
   }
