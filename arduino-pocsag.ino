@@ -31,7 +31,7 @@
 #define STATE_PROCESS_BATCH 	2
 #define STATE_PROCESS_MESSAGE 	3
 
-#define MSGLENGTH 		240
+#define MSGLENGTH 		    240
 #define BITCOUNTERLENGTH	544
 #define WORDBUFFERLENGTH	81
 static const char *functions[4] = {"A", "B", "C", "D"};
@@ -51,37 +51,31 @@ void setup()
   pinMode(triggerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
-  Serial.println("START (MSGLENGTH = "+String(MSGLENGTH)+", BITCOUNTERLENGTH = "+String(BITCOUNTERLENGTH)+"), WORDBUFFERLENGTH = "+String(WORDBUFFERLENGTH)+")");
+  Serial.println("START (MSGLENGTH = " + String(MSGLENGTH) + ", BITCOUNTERLENGTH = " + String(BITCOUNTERLENGTH) + "), WORDBUFFERLENGTH = " + String(WORDBUFFERLENGTH) + ")");
   disable_trigger();
   disable_led();
   start_flank();
   Timer1.initialize(bitPeriod);
 }
 
-void loop()
-{
-  switch (state)
-  {
+void loop() {
+  switch (state) {
     case STATE_WAIT_FOR_PRMB:
-      if (buffer == prmbWord)
-      {
+      if (buffer == prmbWord) {
         state = STATE_WAIT_FOR_SYNC;
         enable_trigger();
       }
       break;
 
     case STATE_WAIT_FOR_SYNC:
-      if (buffer == syncWord)
-      {
+      if (buffer == syncWord) {
         enable_led();
         bitcounter = 0;
         state = STATE_PROCESS_BATCH;
       } else {
-        if (bitcounter > BITCOUNTERLENGTH)
-        {
+        if (bitcounter > BITCOUNTERLENGTH) {
           bitcounter = 0;
-          if (batchcounter > 0)
-          {
+          if (batchcounter > 0) {
             if (state != STATE_PROCESS_MESSAGE) {
               disable_led();
               disable_trigger();
@@ -98,28 +92,24 @@ void loop()
       break;
 
     case STATE_PROCESS_BATCH:
-      if (bitcounter >= 32)
-      {
+      if (bitcounter >= 32) {
         bitcounter = 0;
         wordbuffer[(batchcounter * 16) + (framecounter * 2) + wordcounter] = buffer;
         wordcounter++;
       }
 
-      if (wordcounter >= 2)
-      {
+      if (wordcounter >= 2) {
         wordcounter = 0;
         framecounter++;
       }
 
-      if (framecounter >= 8)
-      {
+      if (framecounter >= 8) {
         framecounter = 0;
         batchcounter++;
         state = STATE_WAIT_FOR_SYNC;
       }
 
-      if (batchcounter >= 5)
-      {
+      if (batchcounter >= 5) {
         batchcounter = 0;
         state = STATE_PROCESS_MESSAGE;
       }
@@ -140,8 +130,7 @@ void loop()
   }
 }
 
-void decode_wordbuffer()
-{
+void decode_wordbuffer() {
   unsigned long address = 0;
   byte function = 0;
   char message[MSGLENGTH];
@@ -150,38 +139,29 @@ void decode_wordbuffer()
   int bcounter = 0;
   int ccounter = 0;
   boolean eot = false;
-  int BatchCounter = 0;
-  int c = 1;
 
-  for (int i = 0; i < WORDBUFFERLENGTH; i++)
-  {
+  for (int i = 0; i < WORDBUFFERLENGTH; i++) {
     if (parity(wordbuffer[i]) == 1) continue;                      // Invalid Codeword
     if (wordbuffer[i] == idleWord) continue;                       // IDLE
     if (wordbuffer[i] == 0) continue;                              // Empty Codeword
 
-    if (bitRead(wordbuffer[i], 31) == 0)                           // Found an Address
-    {
-     if (address == 0)
-      {
+    if (bitRead(wordbuffer[i], 31) == 0) {                         // Found an Address 
+      if (address == 0) {
         address = extract_address(i);
         function = extract_function(i);
         eot = false;
       }
     } else {
-      if (address != 0 && ccounter < MSGLENGTH)
-      {
-        for (int c = 30; c > 10; c--)
-        {
+      if (address != 0 && ccounter < MSGLENGTH) {
+        for (int c = 30; c > 10; c--) {
           bitWrite(character, bcounter, bitRead(wordbuffer[i], c));
           bcounter++;
-          if (bcounter >= 7)
-          {
+          if (bcounter >= 7) {
             if (character == 4) {
               eot = true;
             }
             bcounter = 0;
-            if (eot == false)
-            {
+            if (eot == false) {
               message[ccounter] = checkUmlaut(character);
               ccounter++;
             }
@@ -190,76 +170,8 @@ void decode_wordbuffer()
       }
     }
   }
-  if (address != 0 && String(address).startsWith("19"))
-  {
+  if (address != 0 && String(address).startsWith("19")) {
     print_message(address, function, message);
-
   }
-}
-
-void print_message(unsigned long address, byte function, char message[MSGLENGTH])
-{
-  Serial.print(address);
-  Serial.print("\t");
-  Serial.print(functions[function]);
-  Serial.print("\t");
-  Serial.println(message);
-}
-
-unsigned long extract_address(int idx) {
-  unsigned long address = 0;
-  int pos = idx / 2;// (idx - (idx / 8) * 8) / 2;
-
-  for (int i = 1; i < 19; i++)
-  {
-    bitWrite(address, 21 - i, bitRead(wordbuffer[idx], 31 - i));
-  }
-  bitWrite(address, 0, bitRead((pos), 0));
-  bitWrite(address, 1, bitRead((pos), 1));
-  bitWrite(address, 2, bitRead((pos), 2));
-
-  return address;
-}
-
-byte extract_function(int idx)
-{
-  byte function = 0;
-  bitWrite(function, 0, bitRead(wordbuffer[idx], 11));
-  bitWrite(function, 1, bitRead(wordbuffer[idx], 12));
-  return function;
-}
-
-void flank_isr()
-{
-  delayMicroseconds(halfBitPeriod - 20);
-  start_timer();
-}
-
-void timer_isr()
-{
-  buffer = buffer << 1;
-  bitWrite(buffer, 0, bitRead(PIND, 3));
-  if (state > STATE_WAIT_FOR_PRMB) bitcounter++;
-}
-
-void start_timer()
-{
-  Timer1.restart();
-  Timer1.attachInterrupt(timer_isr);
-}
-
-void stop_timer()
-{
-  Timer1.detachInterrupt();
-}
-
-void start_flank()
-{
-  attachInterrupt(1, flank_isr, RISING);
-}
-
-void stop_flank()
-{
-  detachInterrupt(1);
 }
 

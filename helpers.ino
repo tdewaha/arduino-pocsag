@@ -88,3 +88,60 @@ char checkUmlaut(byte ascii) {
     default:  return  ascii; break;
   }
 }
+
+void print_message(unsigned long address, byte function, char message[MSGLENGTH]) {
+  Serial.print(address);
+  Serial.print("\t");
+  Serial.print(functions[function]);
+  Serial.print("\t");
+  Serial.println(message);
+}
+
+unsigned long extract_address(int idx) {
+  unsigned long address = 0;
+  int pos = idx / 2;// (idx - (idx / 8) * 8) / 2;
+
+  for (int i = 1; i < 19; i++) {
+    bitWrite(address, 21 - i, bitRead(wordbuffer[idx], 31 - i));
+  }
+  bitWrite(address, 0, bitRead((pos), 0));
+  bitWrite(address, 1, bitRead((pos), 1));
+  bitWrite(address, 2, bitRead((pos), 2));
+
+  return address;
+}
+
+byte extract_function(int idx) {
+  byte function = 0;
+  bitWrite(function, 0, bitRead(wordbuffer[idx], 11));
+  bitWrite(function, 1, bitRead(wordbuffer[idx], 12));
+  return function;
+}
+
+void flank_isr() {
+  delayMicroseconds(halfBitPeriod - 20);
+  start_timer();
+}
+
+void timer_isr() {
+  buffer = buffer << 1;
+  bitWrite(buffer, 0, bitRead(PIND, 3));
+  if (state > STATE_WAIT_FOR_PRMB) bitcounter++;
+}
+
+void start_timer() {
+  Timer1.restart();
+  Timer1.attachInterrupt(timer_isr);
+}
+
+void stop_timer() {
+  Timer1.detachInterrupt();
+}
+
+void start_flank() {
+  attachInterrupt(1, flank_isr, RISING);
+}
+
+void stop_flank() {
+  detachInterrupt(1);
+}
