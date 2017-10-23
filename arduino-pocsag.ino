@@ -33,7 +33,7 @@
 
 #define MSGLENGTH 		240
 #define BITCOUNTERLENGTH	544
-#define WORDBUFFERLENGTH	90
+#define WORDBUFFERLENGTH	81
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
@@ -43,7 +43,6 @@ int wordcounter = 0;
 int framecounter = 0;
 int batchcounter = 0;
 
-//unsigned long wordbuffer[81];
 unsigned long wordbuffer[WORDBUFFERLENGTH];
 
 void setup()
@@ -162,7 +161,7 @@ void decode_wordbuffer()
 
     if (bitRead(wordbuffer[i], 31) == 0)                           // Found an Address
     {
-      if (address == 0)
+     if (address == 0)
       {
         address = extract_address(i);
         function = extract_function(i);
@@ -194,18 +193,17 @@ void decode_wordbuffer()
   if (address != 0 && String(address).startsWith("19"))
   {
     print_message(address, function, message);
+
   }
 }
 
 void print_message(unsigned long address, byte function, char message[MSGLENGTH])
 {
-  Serial.print("\r\n");
   Serial.print(address);
   Serial.print("\t");
   Serial.print(functions[function]);
   Serial.print("\t");
   Serial.println(message);
-  Serial.print("\r\n");
 }
 
 unsigned long extract_address(int idx) {
