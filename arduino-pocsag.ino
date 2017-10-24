@@ -33,7 +33,6 @@
 
 #define MSGLENGTH 		    240
 #define BITCOUNTERLENGTH	544
-#define WORDBUFFERLENGTH	81
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
@@ -43,7 +42,7 @@ int wordcounter = 0;
 int framecounter = 0;
 int batchcounter = 0;
 
-unsigned long wordbuffer[WORDBUFFERLENGTH];
+unsigned long wordbuffer[81];
 
 void setup()
 {
@@ -51,7 +50,7 @@ void setup()
   pinMode(triggerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
-  Serial.println("START (MSGLENGTH = " + String(MSGLENGTH) + ", BITCOUNTERLENGTH = " + String(BITCOUNTERLENGTH) + "), WORDBUFFERLENGTH = " + String(WORDBUFFERLENGTH) + ")");
+  Serial.println("START (MSGLENGTH = " + String(MSGLENGTH) + ", BITCOUNTERLENGTH = " + String(BITCOUNTERLENGTH) + ")");
   disable_trigger();
   disable_led();
   start_flank();
@@ -96,6 +95,11 @@ void loop() {
         bitcounter = 0;
         wordbuffer[(batchcounter * 16) + (framecounter * 2) + wordcounter] = buffer;
         wordcounter++;
+	String t = String(buffer);
+ 	if (buffer == idleWord) t = "idleWord";
+	if (buffer == prmbWord) t = "prmbWord";
+	if (buffer == syncWord) t = "syncWord";
+	Serial.println("STATE_PROCESS_BATCH: wordbuffer: "+String((batchcounter * 16) + (framecounter * 2) + wordcounter) +" = "+t);
       }
 
       if (wordcounter >= 2) {
@@ -140,7 +144,7 @@ void decode_wordbuffer() {
   int ccounter = 0;
   boolean eot = false;
 
-  for (int i = 0; i < WORDBUFFERLENGTH; i++) {
+  for (int i = 0; i < 81; i++) {
     if (parity(wordbuffer[i]) == 1) continue;                      // Invalid Codeword
     if (wordbuffer[i] == idleWord) continue;                       // IDLE
     if (wordbuffer[i] == 0) continue;                              // Empty Codeword
@@ -150,6 +154,10 @@ void decode_wordbuffer() {
         address = extract_address(i);
         function = extract_function(i);
         eot = false;
+      } else {
+    	 print_message(address, function, message);                                                                                                                                                                                                                             
+	 for (int j = 0; j < MSGLENGTH; j++) { message[j] = 32;}
+	 address = 0;
       }
     } else {
       if (address != 0 && ccounter < MSGLENGTH) {
@@ -170,7 +178,7 @@ void decode_wordbuffer() {
       }
     }
   }
-  if (address != 0 && String(address).startsWith("19")) {
+  if (address != 0) {
     print_message(address, function, message);
   }
 }
