@@ -156,7 +156,7 @@ void decode_wordbuffer() {
         eot = false;
       } else {
     	 print_message(address, function, message);                                                                                                                                                                                                                             
-	 for (int j = 0; j < MSGLENGTH; j++) { message[j] = 32;}
+         memset(message, 0, sizeof(message));
 	 address = 0;
       }
     } else {
