@@ -25,8 +25,8 @@
 #define prmbWord 1431655765
 #define syncWord 2094142936
 #define idleWord 2055848343
-#define _RA1Word 2357339778
-#define _RA2Word 2357269526
+#define _RA1Word 2357269526
+#define _RA2Word 2357339778
 #define _RA_Word 2181040895
 
 #define STATE_WAIT_FOR_PRMB 	0
@@ -97,16 +97,6 @@ void loop() {
       if (bitcounter >= 32) {
         bitcounter = 0;
         wordbuffer[(batchcounter * 16) + (framecounter * 2) + wordcounter] = buffer;
-	/*
-	String t = String(buffer);
- 	if (buffer == idleWord) t = "idleWord";
-	if (buffer == prmbWord) t = "prmbWord";
-	if (buffer == syncWord) t = "syncWord";
-	if (buffer == _RA1Word) t = "_RA1Word";
-	if (buffer == _RA2Word) t = "_RA2Word";
-	if (buffer == _RA_Word) t = "_RA_Word";
-	Serial.println("STATE_PROCESS_BATCH: wordbuffer: "+String((batchcounter * 16) + (framecounter * 2) + wordcounter) +" = "+t);
-        */
         wordcounter++;
       }
 
@@ -143,8 +133,10 @@ void loop() {
 }
 
 void decode_wordbuffer() {
-  unsigned long address = 0;
-  String s_address = "";
+  unsigned long address[16];
+  memset(address, 0, sizeof(address));
+  int address_counter = 0;
+
   byte function = 0;
   char message[MSGLENGTH];
   memset(message, 0, sizeof(message));
@@ -158,24 +150,25 @@ void decode_wordbuffer() {
     if (wordbuffer[i] == idleWord) continue;                       // IDLE
     if (wordbuffer[i] == 0) continue;                              // Empty Codeword
 
-    //DEBUGGING                                                                                                                                                                                            
-    String t = String(wordbuffer[i]);                                                                                                                                                                                                                                                                                                                   
-    if (wordbuffer[i] == _RA1Word) t = "Master-DAU";                                                                                                                                                       
-    if (wordbuffer[i] == _RA2Word) t = "Slave-DAU";                                                                                                                                                        
-    if (wordbuffer[i] == _RA_Word) t = "HealthCheck";                                                                                                                                                      
-    if (wordbuffer[i] == _RA1Word || wordbuffer[i] == _RA2Word || wordbuffer[i] == _RA_Word) Serial.println("decode_wordbuffer(): wordbuffer: "+ String(i) +" = "+t);                                      
+    //DEBUGGING
+    String t = String(wordbuffer[i]);
+    if (wordbuffer[i] == _RA1Word) t = "StId 6";
+    if (wordbuffer[i] == _RA2Word) t = "StId 8";
+    if (wordbuffer[i] == _RA_Word) t = "Pfadabfrage-Token";
+    if (wordbuffer[i] == _RA1Word || wordbuffer[i] == _RA2Word || wordbuffer[i] == _RA_Word) Serial.println("decode_wordbuffer(): wordbuffer: " + String(i) + " = " + t);
 
     if (bitRead(wordbuffer[i], 31) == 0) {                          // Found an Address
-      address = extract_address(i);
-      if (address > 1949000 && address < 1953000) {
-        s_address = s_address + String(address)+ ";";
-      }
-      if (address == 0) {
-        function = extract_function(i);
-        eot = false;
+      unsigned long temp_address = extract_address(i);
+      if (temp_address > 1949000 && temp_address < 1953000) {
+        if (address[0] == 0) {
+          function = extract_function(i);
+          eot = false;
+        }
+        address[address_counter] = temp_address;
+        address_counter++;
       }
     } else {
-      if (address != 0 && ccounter < MSGLENGTH) {
+      if (address[0] != 0 && ccounter < MSGLENGTH) {
         for (int c = 30; c > 10; c--) {
           bitWrite(character, bcounter, bitRead(wordbuffer[i], c));
           bcounter++;
@@ -193,8 +186,10 @@ void decode_wordbuffer() {
       }
     }
   }
-  if (address != 0) {
-    print_message(s_address, function, message);
+  if (address[0] != 0) {
+    for (int j = 0; j < address_counter; j++) {
+      print_message(String(address[j]), function, message);
+    }
   }
 }
 
