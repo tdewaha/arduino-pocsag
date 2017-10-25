@@ -178,7 +178,7 @@ void decode_wordbuffer() {
             }
             bcounter = 0;
             if (eot == false) {
-              message[ccounter] = checkUmlaut(character);
+              message[ccounter] = character;
               ccounter++;
             }
           }

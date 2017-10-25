@@ -76,25 +76,20 @@ void disable_led()
   CLR(PORTD, ledPin);
 }
 
-char checkUmlaut(byte ascii) {
-  switch (ascii) {
-    case '{': return 'ä'; break; // ä 0x84
-    case '|': return 'ö'; break; // ö 0x94
-    case '}': return 'ü'; break; // ü 0x81
-    case '[': return 'Ä'; break; // Ä 0x8E
-    case ']': return 'Ü'; break; // Ü 0x99
-    case '\\': return 'Ö'; break; // Ö 0x9A
-    case '~' : return 'ß'; break; // ß 0xE1
-    default:  return  ascii; break;
-  }
-}
-
 void print_message(String s_address, byte function, char message[MSGLENGTH]) {
   Serial.print("[");
   Serial.print(s_address);
   Serial.print("];");
   Serial.print(functions[function]);
   Serial.print(";");
+  String msg = String(message);
+  msg.replace("{","ä");
+  msg.replace("|","ö");
+  msg.replace("}","ü");
+  msg.replace("[","Ä");
+  msg.replace("]","Ö");
+  msg.replace("\\","Ü");
+  msg.replace("~","ß");
   Serial.println(message);
 }
 
