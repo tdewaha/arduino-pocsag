@@ -89,8 +89,8 @@ char checkUmlaut(byte ascii) {
   }
 }
 
-void print_message(unsigned long address, byte function, char message[MSGLENGTH]) {
-  Serial.print(address);
+void print_message(String s_address, byte function, char message[MSGLENGTH]) {
+  Serial.print(s_address);
   Serial.print("\t");
   Serial.print(functions[function]);
   Serial.print("\t");
