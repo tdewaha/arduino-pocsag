@@ -135,9 +135,11 @@ void loop() {
 void decode_wordbuffer() {
   unsigned long address[16];
   memset(address, 0, sizeof(address));
+  
   int address_counter = 0;
 
-  byte function = 0;
+  byte function[16];
+  memset(function, 0, sizeof(function));
   char message[MSGLENGTH];
   memset(message, 0, sizeof(message));
   byte character = 0;
@@ -146,27 +148,25 @@ void decode_wordbuffer() {
   boolean eot = false;
 
   for (int i = 0; i < 81; i++) {
+    //DEBUGGING                                                                                                                                                          
+    String t = String(wordbuffer[i]);                                                                                                                                    
+    Serial.println("wordbuffer["+String(i)+"] = "+t+";"); 
+
     if (parity(wordbuffer[i]) == 1) continue;                      // Invalid Codeword
     if (wordbuffer[i] == idleWord) continue;                       // IDLE
     if (wordbuffer[i] == 0) continue;                              // Empty Codeword
 
-    //DEBUGGING
-    String t = String(wordbuffer[i]);
     if (wordbuffer[i] == _RA1Word) t = "StId 6";
     if (wordbuffer[i] == _RA2Word) t = "StId 8";
     if (wordbuffer[i] == _RA_Word) t = "Pfadabfrage-Token";
     if (wordbuffer[i] == _RA1Word || wordbuffer[i] == _RA2Word || wordbuffer[i] == _RA_Word) Serial.println("decode_wordbuffer(): wordbuffer: " + String(i) + " = " + t);
 
     if (bitRead(wordbuffer[i], 31) == 0) {                          // Found an Address
-      unsigned long temp_address = extract_address(i);
-      if (temp_address > 1949000 && temp_address < 1953000) {
-        if (address[0] == 0) {
-          function = extract_function(i);
-          eot = false;
-        }
-        address[address_counter] = temp_address;
-        address_counter++;
-      }
+      Serial.println("Adresse gefunden an Stelle "+String(i)+", address_counter = "+String(address_counter));
+      address[address_counter] = extract_address(i);
+      function[address_counter] = extract_function(i);
+      eot = false;
+      address_counter++;
     } else {
       if (address[0] != 0 && ccounter < MSGLENGTH) {
         for (int c = 30; c > 10; c--) {
@@ -188,7 +188,7 @@ void decode_wordbuffer() {
   }
   if (address[0] != 0) {
     for (int j = 0; j < address_counter; j++) {
-      print_message(String(address[j]), function, message);
+      print_message(String(address[j]), function[j], message);
     }
   }
 }
