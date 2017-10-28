@@ -25,16 +25,13 @@
 #define prmbWord 1431655765
 #define syncWord 2094142936
 #define idleWord 2055848343
-#define _RA1Word 2357269526
-#define _RA2Word 2357339778
-#define _RA_Word 2181040895
 
 #define STATE_WAIT_FOR_PRMB 	0
 #define STATE_WAIT_FOR_SYNC 	1
 #define STATE_PROCESS_BATCH 	2
 #define STATE_PROCESS_MESSAGE 	3
 
-#define MSGLENGTH 	        240
+#define MSGLENGTH 	      240
 #define BITCOUNTERLENGTH	544
 static const char *functions[4] = {"A", "B", "C", "D"};
 
@@ -53,7 +50,7 @@ void setup()
   pinMode(triggerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
-  Serial.println("START (MSGLENGTH = " + String(MSGLENGTH) + ", BITCOUNTERLENGTH = " + String(BITCOUNTERLENGTH) + ")");
+  Serial.println("START");
   disable_trigger();
   disable_led();
   start_flank();
@@ -148,15 +145,12 @@ void decode_wordbuffer() {
 
   for (int i = 0; i < 81; i++) {
     //DEBUGGING
-    String t = String(wordbuffer[i]);
-    if (wordbuffer[i] == _RA1Word) t = "StId 6";
-    if (wordbuffer[i] == _RA2Word) t = "StId 8";
-    if (wordbuffer[i] == _RA_Word) t = "Pfadabfrage-Token";
-    if (wordbuffer[i] == prmbWord) t = "prmbWord";
-    if (wordbuffer[i] == idleWord) t = "idleWord";
-    if (wordbuffer[i] == syncWord) t = "syncWord";
-
+    //String t = String(wordbuffer[i]);
+    //if (wordbuffer[i] == prmbWord) t = "prmbWord";
+    //if (wordbuffer[i] == idleWord) t = "idleWord";
+    //if (wordbuffer[i] == syncWord) t = "syncWord";
     //Serial.println("decode_wordbuffer(): wordbuffer: " + String(i) + " = " + t);
+    
 
     if (parity(wordbuffer[i]) == 1) {
       Serial.println("decode_wordbuffer(): wordbuffer: " + String(i) + " Parity Error");
@@ -184,7 +178,6 @@ void decode_wordbuffer() {
           bcounter++;
           if (bcounter >= 7) {
             if (character == 4) {
-              //if (!eot) print_message(String(address[address_counter - 1]), function[address_counter - 1], message);
               eot = true;
             }
             bcounter = 0;
@@ -197,10 +190,8 @@ void decode_wordbuffer() {
       }
     }
   }
-
   if (address_counter > 0) {
     print_message(String(address[address_counter - 1]), function[address_counter - 1], message);
-    //Serial.println("address_counter = " + String(address_counter));
   }
 }
 
