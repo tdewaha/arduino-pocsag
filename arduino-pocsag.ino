@@ -36,8 +36,8 @@
 
 #define MSGLENGTH 	        240
 #define BITCOUNTERLENGTH	540
-#define WORDBUFFERLENGTH	193  //81
-#define MAXNUMBATCHES		12    //5
+#define WORDBUFFERLENGTH	225  //81
+#define MAXNUMBATCHES		14    //5
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
@@ -150,6 +150,7 @@ void decode_wordbuffer() {
   boolean eot = false;
 
   for (int i = 0; i < WORDBUFFERLENGTH; i++) {
+    if (wordbuffer[i] == 0) continue;
     //DEBUGGING
     String t = String(wordbuffer[i]);
     if (wordbuffer[i] == _RA1Word) t = "StId 6";
@@ -166,8 +167,6 @@ void decode_wordbuffer() {
       //continue;
     }
     if (wordbuffer[i] == idleWord) continue;
-    if (wordbuffer[i] == 0) continue;
-
 
     if (bitRead(wordbuffer[i], 31) == 0) {
       if  ((i > 0 && wordbuffer[i - 1] == idleWord || address_counter == 0) && (parity(wordbuffer[i]) != 1)) {
