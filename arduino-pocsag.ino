@@ -36,7 +36,7 @@
 
 #define MSGLENGTH 	        240
 #define BITCOUNTERLENGTH	  540
-#define MAXNUMBATCHES		     17    //5
+#define MAXNUMBATCHES		     15    //5
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
