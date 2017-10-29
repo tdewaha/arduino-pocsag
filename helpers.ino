@@ -77,19 +77,10 @@ void disable_led()
 }
 
 void print_message(String s_address, byte function, char message[MSGLENGTH]) {
-  Serial.print("[");
   Serial.print(s_address);
-  Serial.print("];");
+  Serial.print(";");
   Serial.print(functions[function]);
   Serial.print(";");
-  String msg = String(message);
-  msg.replace("{","ä");
-  msg.replace("|","ö");
-  msg.replace("}","ü");
-  msg.replace("[","Ä");
-  msg.replace("]","Ö");
-  msg.replace("\\","Ü");
-  msg.replace("~","ß");
   Serial.println(message);
 }
 

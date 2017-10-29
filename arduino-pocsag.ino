@@ -29,15 +29,14 @@
 #define _RA2Word 2357339778
 #define _RA_Word 2181040895
 
-#define STATE_WAIT_FOR_PRMB 	0
-#define STATE_WAIT_FOR_SYNC 	1
-#define STATE_PROCESS_BATCH 	2
+#define STATE_WAIT_FOR_PRMB 	  0
+#define STATE_WAIT_FOR_SYNC 	  1
+#define STATE_PROCESS_BATCH 	  2
 #define STATE_PROCESS_MESSAGE 	3
 
 #define MSGLENGTH 	        240
-#define BITCOUNTERLENGTH	540
-#define WORDBUFFERLENGTH	225  //81
-#define MAXNUMBATCHES		14    //5
+#define BITCOUNTERLENGTH	  540
+#define MAXNUMBATCHES		     17    //5
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
@@ -47,8 +46,7 @@ int wordcounter = 0;
 int framecounter = 0;
 int batchcounter = 0;
 
-unsigned long wordbuffer[WORDBUFFERLENGTH];
-
+unsigned long wordbuffer[(MAXNUMBATCHES*16)+1];
 
 void setup()
 {
@@ -56,7 +54,7 @@ void setup()
   pinMode(triggerPin, OUTPUT);
   pinMode(ledPin, OUTPUT);
   Serial.begin(115200);
-  Serial.println("START (MSGLENGTH = " + String(MSGLENGTH) + ", BITCOUNTERLENGTH = " + String(BITCOUNTERLENGTH) + ", WORDBUFFERLENGTH = " + String(WORDBUFFERLENGTH)+")");
+  Serial.println("START");
   disable_trigger();
   disable_led();
   start_flank();
@@ -149,7 +147,7 @@ void decode_wordbuffer() {
   int ccounter = 0;
   boolean eot = false;
 
-  for (int i = 0; i < WORDBUFFERLENGTH; i++) {
+  for (int i = 0; i < ((MAXNUMBATCHES * 16) + 1); i++) {
     if (wordbuffer[i] == 0) continue;
     //DEBUGGING
     String t = String(wordbuffer[i]);
