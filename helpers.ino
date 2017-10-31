@@ -132,7 +132,10 @@ void print_message(String s_address, byte function, char message[MSGLENGTH]) {
   Serial.print(";");
   Serial.print(functions[function]);
   Serial.print(";");
-  Serial.println(message);
+  String msg = String(message);
+  msg.replace("\n","[0A]");
+  msg.replace("\r","[0D]");
+  Serial.println(msg);
 }
 
 void process_serial_input(String serread) {

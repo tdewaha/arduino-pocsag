@@ -162,7 +162,7 @@ void decode_wordbuffer() {
       if (wordbuffer[i] == idleWord) t = F("idleWord");
       if (wordbuffer[i] == syncWord) t = F("syncWord");
       if (debugLevel == 2 || (debugLevel == 1 && i < 2))
-        Serial.println(String(F("CW[")) + String(i) + F("] ") + t);
+        Serial.println(String(F("CW:")) + String(i) + F(":") + t);
     }
 
     if (wordbuffer[i] == 0) continue;
@@ -170,7 +170,7 @@ void decode_wordbuffer() {
 
     if (enableParityCheck) {
       if (parity(wordbuffer[i]) == 1) {
-        if (debugLevel == 2) Serial.println (String(F("PE[")) + String(i) + F("]"));
+        if (debugLevel == 2) Serial.println (String(F("PE:")) + String(i) + F(":"));
         continue;
       }
     }
