@@ -127,15 +127,50 @@ void print_config() {
   Serial.println(String(F("Parity Check ")) + strpcheck + "\n" + strdebug);
 }
 
-void print_message(String s_address, byte function, char message[MSGLENGTH]) {
+void print_message(String NetID, String s_address, byte function, char message[MSGLENGTH]) {
+  Serial.print(NetID);
+  Serial.print(";");
   Serial.print(s_address);
   Serial.print(";");
   Serial.print(functions[function]);
   Serial.print(";");
-  String msg = String(message);
-  msg.replace("\n","[0A]");
-  msg.replace("\r","[0D]");
-  Serial.println(msg);
+  String strMessage = "";
+  for (int i = 0; i < MSGLENGTH; i++)  {
+    if (message[i] > 31 && message[i] < 127) {
+      switch (message[i]) {
+        case '|':
+          strMessage += "ö";
+          break;
+        case '{':
+          strMessage += "ä";
+          break;
+        case '}':
+          strMessage += "ü";
+          break;
+        case '[':
+          strMessage += "Ä";
+          break;
+        case ']':
+          strMessage += "Ü";
+          break;
+        case '\\':
+          strMessage += "Ö";
+          break;
+        case '~':
+          strMessage += "ß";
+          break;
+        case '\n':
+          strMessage += "[0A]";
+          break;
+        case '\r':
+          strMessage += "[0D]";
+          break;
+        default:
+          strMessage += message[i];
+      }
+    }
+  }
+  Serial.println(strMessage);
 }
 
 void process_serial_input(String serread) {

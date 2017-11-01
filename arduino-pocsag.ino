@@ -24,7 +24,7 @@
 #define ledPin          7 //PORTD
 #define bitPeriod 833
 #define halfBitPeriod 416
-#define prmbWord 1431655765
+#define prmbWord 2863311530//1431655765
 #define syncWord 2094142936
 #define idleWord 2055848343
 
@@ -34,8 +34,8 @@
 #define STATE_PROCESS_MESSAGE 	3
 
 #define MSGLENGTH 	        240
-#define BITCOUNTERLENGTH	  544
-#define MAXNUMBATCHES		     15    //5
+#define BITCOUNTERLENGTH	  540
+#define MAXNUMBATCHES		     12    //5
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
@@ -156,6 +156,7 @@ void decode_wordbuffer() {
   boolean eot = false;
 
   for (int i = 0; i < ((MAXNUMBATCHES * 16) + 1); i++) {
+    if (wordbuffer[i] == 0) continue;
     if (debugLevel > 0) {
       String t = String(wordbuffer[i]);
       if (wordbuffer[i] == prmbWord) t = F("prmbWord");
@@ -165,7 +166,6 @@ void decode_wordbuffer() {
         Serial.println(String(F("CW:")) + String(i) + F(":") + t);
     }
 
-    if (wordbuffer[i] == 0) continue;
     if (wordbuffer[i] == idleWord) continue;
 
     if (enableParityCheck) {
@@ -178,15 +178,18 @@ void decode_wordbuffer() {
     if (bitRead(wordbuffer[i], 31) == 0) {
       if  ((i > 0 && wordbuffer[i - 1] == idleWord || address_counter == 0) && (parity(wordbuffer[i]) != 1)) {
         address[address_counter] = extract_address(i);
-        if (debugLevel == 2) Serial.println(String(F("Adresse ")) + String(address[address_counter]) + F(" gefunden an Stelle ") + String(i) + F(", address_counter = ") + String(address_counter));
+        if (debugLevel == 2)
+          Serial.println(String(F("Adresse ")) + String(address[address_counter]) + F(" gefunden an Stelle ") + String(i) + F(", address_counter = ") + String(address_counter));
         function[address_counter] = extract_function(i);
-        if (address_counter > 0) print_message(String(address[address_counter - 1]), function[address_counter - 1], message);
+        if (address_counter > 0)
+          print_message(String(wordbuffer[0]),String(address[address_counter - 1]), function[address_counter - 1], message);
         eot = false;
         ccounter = 0;
         bcounter = 0;
         address_counter++;
       }
     } else {
+
       if (address[address_counter - 1] != 0 && ccounter < MSGLENGTH) {
         for (int c = 30; c > 10; c--) {
           bitWrite(character, bcounter, bitRead(wordbuffer[i], c));
@@ -207,7 +210,7 @@ void decode_wordbuffer() {
   }
 
   if (address_counter > 0) {
-    print_message(String(address[address_counter - 1]), function[address_counter - 1], message);
+    print_message(String(wordbuffer[0]),String(address[address_counter - 1]), function[address_counter - 1], message);
     if (debugLevel == 2) Serial.println(String(F("address_counter = ")) + String(address_counter));
   }
 }
