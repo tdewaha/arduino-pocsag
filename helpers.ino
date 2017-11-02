@@ -123,60 +123,63 @@ void stop_flank() {
 void print_config() {
   String strpcheck =  ((enableParityCheck == true) ? "enabled" : "disabled");
   String strecc =  ((enable_ecc == true) ? F("ECC enabled") : F("ECC disabled"));
+  String strrawOutput = ((rawOutput == true) ? F("RAW Output enabled") : F("RAW Output disabled"));
   String strdebug =  F("Debug Level 0 (OFF)");
   if (debugLevel == 1) strdebug = F("Debug Level 1 (CW 0 + 1)");
   if (debugLevel == 2) strdebug = F("Debug Level 2 (ALL)");
-  Serial.println(String(F("Parity Check ")) + strpcheck + F("\n") + strdebug + F("\n") + strecc);
+  Serial.println(String(F("Parity Check ")) + strpcheck + F("\n") + strdebug + F("\n") + strecc + F("\n") + strrawOutput);
 }
 
 void print_message(String NetID, String s_address, byte function, char message[MSGLENGTH]) {
-  Serial.print(NetID);
-  Serial.print(";");
-  Serial.print(s_address);
-  Serial.print(";");
-  Serial.print(functions[function]);
-  Serial.print(";");
-  String strMessage = "";
-  for (int i = 0; i < MSGLENGTH; i++)  {
-    if (message[i] > 31 && message[i] < 127) {
-      switch (message[i]) {
-        case '|':
-          strMessage += "ö";
-          break;
-        case '{':
-          strMessage += "ä";
-          break;
-        case '}':
-          strMessage += "ü";
-          break;
-        case '[':
-          strMessage += "Ä";
-          break;
-        case ']':
-          strMessage += "Ü";
-          break;
-        case '\\':
-          strMessage += "Ö";
-          break;
-        case '~':
-          strMessage += "ß";
-          break;
-        case '\n':
-          strMessage += "[0A]";
-          break;
-        case '\r':
-          strMessage += "[0D]";
-          break;
-        default:
-          strMessage += message[i];
+  if (!rawOutput) {
+    Serial.print(NetID);
+    Serial.print(";");
+    Serial.print(s_address);
+    Serial.print(";");
+    Serial.print(functions[function]);
+    Serial.print(";");
+    String strMessage = "";
+    for (int i = 0; i < MSGLENGTH; i++)  {
+      if (message[i] > 31 && message[i] < 127) {
+        switch (message[i]) {
+          case '|':
+            strMessage += "ö";
+            break;
+          case '{':
+            strMessage += "ä";
+            break;
+          case '}':
+            strMessage += "ü";
+            break;
+          case '[':
+            strMessage += "Ä";
+            break;
+          case ']':
+            strMessage += "Ü";
+            break;
+          case '\\':
+            strMessage += "Ö";
+            break;
+          case '~':
+            strMessage += "ß";
+            break;
+          case '\n':
+            strMessage += "[0A]";
+            break;
+          case '\r':
+            strMessage += "[0D]";
+            break;
+          default:
+            strMessage += message[i];
+        }
       }
     }
+    Serial.println(strMessage);
   }
-  Serial.println(strMessage);
 }
 
 void process_serial_input(String serread) {
-  if (serread.startsWith("h") || serread.startsWith("?")) Serial.println(F("p0 = Parity Check disabled\np1 = Parity Check enabled\nd0 = Debug Level 0\nd1 = Debug Level 1\nd2 = Debug Level 2\ne0 = ECC disabled\ne1 = ECC enabled\nsh = print config"));
+  if (serread.startsWith("h") || serread.startsWith("?")) Serial.println(F("p0 = Parity Check disabled\np1 = Parity Check enabled\nd0 = Debug Level 0\nd1 = Debug Level 1\nd2 = Debug Level 2\ne0 = ECC disabled\ne1 = ECC enabled\nr0 = RAW output disabled\nr1 = RAW Output enabled\nsh = print config"));
   if (serread.startsWith("sh")) {
     print_config();
   }
@@ -214,6 +217,16 @@ void process_serial_input(String serread) {
     EEPROM.write(2, true);
     enable_ecc = true;
     Serial.println(F("ECC enabled"));
+  }
+  if (serread.startsWith("r0")) {
+    EEPROM.write(3, false);
+    rawOutput = false;
+    Serial.println(F("RAW Output disabled"));
+  }
+  if (serread.startsWith("r1")) {
+    EEPROM.write(3, true);
+    rawOutput = true;
+    Serial.println(F("RAW Output enabled"));
   }
 }
 

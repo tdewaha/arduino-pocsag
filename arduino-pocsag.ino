@@ -47,6 +47,7 @@ int batchcounter = 0;
 bool enableParityCheck = false;
 byte debugLevel = 0;
 bool enable_ecc = false;
+bool rawOutput = false;
 unsigned long wordbuffer[(MAXNUMBATCHES * 16) + 1];
 char ob[32];
 unsigned int bch[1024], ecs[25];
@@ -60,8 +61,9 @@ void setup()
   enableParityCheck = EEPROM.read(0);
   debugLevel = EEPROM.read(1);
   enable_ecc = EEPROM.read(2);
+  rawOutput = EEPROM.read(3);
   //if (enable_ecc) setupecc();
-  Serial.println(F("START"));
+  Serial.println(F("START POCSAG DECODER"));
   print_config();
   disable_trigger();
   disable_led();
@@ -160,15 +162,14 @@ void decode_wordbuffer() {
   int ccounter = 0;
   boolean eot = false;
 
-  if (debugLevel == 2) Serial.println(F("========"));
   for (int i = 0; i < ((MAXNUMBATCHES * 16) + 1); i++) {
     if (wordbuffer[i] == 0) continue;
-    if (debugLevel > 0) {
+    if (debugLevel > 0 || rawOutput) {
       String t = String(wordbuffer[i]);
       //if (wordbuffer[i] == prmbWord) t = F("prmbWord");
       //if (wordbuffer[i] == idleWord) t = F("idleWord");
       //if (wordbuffer[i] == syncWord) t = F("syncWord");
-      if (debugLevel == 2 || (debugLevel == 1 && i < 2))
+      if (debugLevel == 2 || (debugLevel == 1 && i < 2) || rawOutput)
         Serial.println(String(F("wordbuffer[")) + String(i) + F("] = ") + t + F(";"));
     }
 
@@ -176,7 +177,7 @@ void decode_wordbuffer() {
 
     if (enableParityCheck) {
       if (parity(wordbuffer[i]) == 1) {
-        if (debugLevel == 2) Serial.println(String(F("wordbuffer[")) + String(i) + F("] = ") + String(wordbuffer[i]) + F("; PE"));
+        if (debugLevel == 2 && !rawOutput) Serial.println(String(F("wordbuffer[")) + String(i) + F("] = ") + String(wordbuffer[i]) + F("; PE"));
         continue;
       }
     }
@@ -197,7 +198,7 @@ void decode_wordbuffer() {
       if  ((i > 0 && wordbuffer[i - 1] == idleWord || address_counter == 0) && (parity(wordbuffer[i]) != 1)) {
         address[address_counter] = extract_address(i);
         if (debugLevel == 2)
-          Serial.println(String(F("wordbuffer[")) + String(i) + F("] = ") + String(wordbuffer[i]) + F("; //")+String(F("Adresse ")) + String(address[address_counter]) + F(" gefunden, ")+ F(", address_counter = ") + String(address_counter));
+          if (!rawOutput) Serial.println(String(F("wordbuffer[")) + String(i) + F("] = ") + String(wordbuffer[i]) + F("; //") + String(F("Adresse ")) + String(address[address_counter]) + F(" gefunden, address_counter = ") + String(address_counter));
         function[address_counter] = extract_function(i);
         if (address_counter > 0)
           print_message(String(wordbuffer[0]), String(address[address_counter - 1]), function[address_counter - 1], message);
@@ -228,8 +229,11 @@ void decode_wordbuffer() {
   }
 
 
-  if (address_counter > 0) {
+  if (address_counter > 0 || rawOutput) {
     print_message(String(wordbuffer[0]), String(address[address_counter - 1]), function[address_counter - 1], message);
-    if (debugLevel == 2) Serial.println(String(F("address_counter = ")) + String(address_counter));
+    if (debugLevel == 2) {
+      if (!rawOutput) Serial.println(String(F("address_counter = ")) + String(address_counter));
+      Serial.println(F("========"));
+    }
   }
 }
