@@ -51,30 +51,29 @@ int parity (unsigned long x)  // Parity check. If ==1, codeword is invalid
   return x & 1;
 }
 
-void enable_trigger()
+void enable_pmbled()
 {
-  SET(PORTD, triggerPin);
+  SET(PORTH, pmbledPin - 3);
 }
 
-void disable_trigger()
+void disable_pmbled()
 {
-  CLR(PORTD, triggerPin);
+  CLR(PORTH, pmbledPin - 3);
 }
 
-void enable_led()
+void enable_syncled()
 {
-  SET(PORTD, ledPin);
+  SET(PORTH, syncledPin - 3);
 }
 
-void disable_led()
+void disable_syncled()
 {
-  CLR(PORTD, ledPin);
+  CLR(PORTH, syncledPin - 3);
 }
 
 unsigned long extract_address(int idx) {
   unsigned long address = 0;
-  int pos = idx / 2;// (idx - (idx / 8) * 8) / 2;
-
+  int pos = idx / 2;
   for (int i = 1; i < 19; i++) {
     bitWrite(address, 21 - i, bitRead(wordbuffer[idx], 31 - i));
   }
@@ -93,13 +92,13 @@ byte extract_function(int idx) {
 }
 
 void flank_isr() {
-  delayMicroseconds(halfBitPeriod - 20);
+  delayMicroseconds(halfBitPeriod - halfBitPeriodTolerance);
   start_timer();
 }
 
 void timer_isr() {
   buffer = buffer << 1;
-  bitWrite(buffer, 0, bitRead(PIND, 3));
+  bitWrite(buffer, 0, bitRead(PIND, 2));
   if (state > STATE_WAIT_FOR_PRMB) bitcounter++;
 }
 
@@ -113,31 +112,15 @@ void stop_timer() {
 }
 
 void start_flank() {
-  attachInterrupt(1, flank_isr, RISING);
+  attachInterrupt(4, flank_isr, invert_signal + 2);
 }
 
 void stop_flank() {
-  detachInterrupt(1);
+  detachInterrupt(4);
 }
 
-void print_config() {
-  String strpcheck =  ((enableParityCheck == true) ? "enabled" : "disabled");
-  String strecc =  ((enable_ecc == true) ? F("ECC enabled") : F("ECC disabled"));
-  String strrawOutput = ((rawOutput == true) ? F("RAW Output enabled") : F("RAW Output disabled"));
-  String strdebug =  F("Debug Level 0 (OFF)");
-  if (debugLevel == 1) strdebug = F("Debug Level 1 (CW 0 + 1)");
-  if (debugLevel == 2) strdebug = F("Debug Level 2 (ALL)");
-  Serial.println(String(F("Parity Check ")) + strpcheck + F("\n") + strdebug + F("\n") + strecc + F("\n") + strrawOutput);
-}
-
-void print_message(String NetID, String s_address, byte function, char message[MSGLENGTH]) {
-  if (!rawOutput) {
-    Serial.print(NetID);
-    Serial.print(";");
-    Serial.print(s_address);
-    Serial.print(";");
-    Serial.print(functions[function]);
-    Serial.print(";");
+void print_message(unsigned long s_address, byte function, char message[MSGLENGTH]) {
+  if (s_address > 1949000 && s_address < 1955000) {
     String strMessage = "";
     for (int i = 0; i < MSGLENGTH; i++)  {
       if (message[i] > 31 && message[i] < 127) {
@@ -174,187 +157,104 @@ void print_message(String NetID, String s_address, byte function, char message[M
         }
       }
     }
-    Serial.println(strMessage);
+    Serial.println("\r\n" + String(s_address) + ";" + functions[function] + ";" + strMessage);
   }
 }
 
-void process_serial_input(String serread) {
-  if (serread.startsWith("h") || serread.startsWith("?")) Serial.println(F("p0 = Parity Check disabled\np1 = Parity Check enabled\nd0 = Debug Level 0\nd1 = Debug Level 1\nd2 = Debug Level 2\ne0 = ECC disabled\ne1 = ECC enabled\nr0 = RAW output disabled\nr1 = RAW Output enabled\nsh = print config"));
-  if (serread.startsWith("sh")) {
-    print_config();
+void print_config() {
+  String strpcheck =  ((enable_paritycheck == true) ? F("Parity Check ON")     : F("Parity Check OFF"));
+  String strecc =                                     F("ECC-Mode     OFF");
+  if (ecc_mode == 1) strecc =                         F("ECC-Mode     1 bit");
+  if (ecc_mode == 2) strecc =                         F("ECC-Mode     2 bit");
+  if (ecc_mode == 3) strecc =                         F("ECC-Mode    >2 bit");
+  String strled =  ((enable_led == true) ?            F("LED          ON")     : F("LED          OFF"));
+  String strdebug =                                   F("Debug Level  OFF (0)");
+  if (debugLevel == 1) strdebug =                     F("Debug Level  CW 0+1 ");
+  if (debugLevel == 2) strdebug =                     F("Debug Level  ALL (2)");
+  String strinvert =  ((invert_signal == FALLING) ?   F("Input Level  NORMAL") : F("Input Level  INV."));
+
+  Serial.println( strpcheck + F("\r\n") + strdebug + F("\r\n") + strecc + F("\r\n") + strled + F("\r\n") + strinvert);
+}
+
+void process_serial_input() {
+  Serial.println();
+  if (strstr(serbuf, "time")) {
+    if (serbufcounter > 23) {
+      tag = getIntFromString (serbuf, 1);
+      monat = getIntFromString (serbuf, 2);
+      jahr = getIntFromString (serbuf, 3);
+      stunde = getIntFromString (serbuf, 4);
+      minute = getIntFromString (serbuf, 5);
+      sekunde = getIntFromString (serbuf, 6);
+
+      // Ausgelesene Werte einer groben Plausibilitätsprüfung unterziehen:
+      if (!checkDateTime(jahr, monat, tag, stunde, minute, sekunde)) {
+        Serial.println(serbuf);
+        Serial.println("Fehlerhafte Zeitangabe im 'set' Befehl");
+        Serial.println("Beispiel: set 08.11.2017 10:54:00");
+        return;
+      }
+      rtcWriteTime(jahr, monat, tag, stunde, minute, sekunde);
+      Serial.println("Zeit und Datum wurden auf neue Werte gesetzt.");
+    }
+    Serial.println(strRTCDateTime());
+    return;
   }
-  if (serread.startsWith("p0")) {
+  if (strstr(serbuf, "h")|| strstr(serbuf, "?")) Serial.println(F("p0 = Parity Check disabled\r\np1 = Parity Check enabled\r\nd0 = Debug Level 0\r\nd1 = Debug Level 1\r\nd2 = Debug Level 2\r\ne0 = ECC disabled\r\ne1 = ECC enabled\r\nr0 = RAW output disabled\r\nr1 = RAW Output enabled\r\nl0 = LED disabled\r\nl1 = LED enabled\r\ni0 = Input normal\r\nl1 = Input inverted\nsh = print config"));
+  if (strstr(serbuf, "p0")) {
     EEPROM.write(0, false);
-    enableParityCheck = false;
-    Serial.println(F("Parity Check disabled"));
+    enable_paritycheck = false;
   }
-  if (serread.startsWith("p1")) {
+  if (strstr(serbuf, "p1")) {
     EEPROM.write(0, true);
-    enableParityCheck = true;
-    Serial.println(F("Parity Check enabled"));
+    enable_paritycheck = true;
   }
-  if (serread.startsWith("d0")) {
+  if (strstr(serbuf, "d0")) {
     EEPROM.write(1, 0);
     debugLevel = 0;
-    Serial.println(F("Debug Level 0 (OFF)"));
   }
-  if (serread.startsWith("d1")) {
+  if (strstr(serbuf, "d1")) {
     EEPROM.write(1, 1);
     debugLevel = 1;
-    Serial.println(F("Debug Level 1 (CW 0 + 1)"));
   }
-  if (serread.startsWith("d2")) {
+  if (strstr(serbuf, "d2")) {
     EEPROM.write(1, 2);
     debugLevel = 2;
-    Serial.println(F("Debug Level 2 (ALL)"));
   }
-  if (serread.startsWith("e0")) {
-    EEPROM.write(2, false);
-    enable_ecc = false;
-    Serial.println(F("ECC disabled"));
+  if (strstr(serbuf, "e0")) {
+    EEPROM.write(2, 0);
+    ecc_mode = 0;
   }
-  if (serread.startsWith("e1")) {
-    EEPROM.write(2, true);
-    enable_ecc = true;
-    Serial.println(F("ECC enabled"));
+  if (strstr(serbuf, "e1")) {
+    EEPROM.write(2, 1);
+    ecc_mode = 1;
   }
-  if (serread.startsWith("r0")) {
+  if (strstr(serbuf, "e2")) {
+    EEPROM.write(2, 2);
+    ecc_mode = 2;
+  }
+  if (strstr(serbuf, "e3")) {
+    EEPROM.write(2, 3);
+    ecc_mode = 3;
+  }
+  if (strstr(serbuf, "l0")) {
     EEPROM.write(3, false);
-    rawOutput = false;
-    Serial.println(F("RAW Output disabled"));
+    enable_led = false;
   }
-  if (serread.startsWith("r1")) {
+  if (strstr(serbuf, "l1")) {
     EEPROM.write(3, true);
-    rawOutput = true;
-    Serial.println(F("RAW Output enabled"));
+    enable_led = true;
   }
+  if (strstr(serbuf, "i0")) {
+    EEPROM.write(4, FALLING);
+    invert_signal = FALLING;
+  }
+  if (strstr(serbuf, "i1")) {
+    EEPROM.write(4, RISING);
+    invert_signal = RISING;
+  }
+  print_config();
 }
 
-byte bit10(byte gin) {
-  int k = 0;
-
-  for (int i = 0; i < 10; i++) {
-    if ((gin & 0x01) != 0) k++;
-    gin = gin >> 1;
-  }
-  return (k);
-}
-
-byte ecd() {
-  int synd, b1, b2, i;
-  byte errors = 0, parity = 0;
-
-  int ecc = 0x000;
-  int acc = 0;
-
-  // run through error detection and correction routine
-
-  for (i = 0; i <= 20; i++) {
-    if (ob[i] == 1)
-    {
-      ecc = ecc ^ ecs[i];
-      parity = parity ^ 0x01;
-    }
-  }
-
-  for (i = 21; i <= 30; i++) {
-    acc = acc << 1;
-    if (ob[i] == 1) acc = acc ^ 0x01;
-  }
-
-  synd = ecc ^ acc;
-  Serial.println("SYND = " + String(synd));
-
-  if (synd != 0) {// if nonzero syndrome we have error
-    if (bch[synd] != 0) { // check for correctable error
-      b1 = bch[synd] & 0x1f;
-      b2 = bch[synd] >> 5;
-      b2 = b2 & 0x1f;
-
-      if (b2 != 0x1f) {
-        ob[b2] = ob[b2] ^ 0x01;
-        ecc = ecc ^ ecs[b2];
-      }
-
-      if (b1 != 0x1f) {
-        ob[b1] = ob[b1] ^ 0x01;
-        ecc = ecc ^ ecs[b1];
-      }
-      errors = bch[synd] >> 12;
-    }
-    else errors = 3;
-
-    if (errors == 1) parity = parity ^ 0x01;
-  }
-
-  // check parity ....
-  parity = (parity + bit10(ecc)) & 0x01;
-
-  if (parity != ob[31]) errors++;
-
-  if (errors > 3) errors = 3;
-
-  return (errors);
-}
-
-void setupecc()
-{
-  unsigned int srr, j, k;
-  int i, n;
-
-  // calculate all information needed to implement error correction
-  srr = 0x3B4;
-
-  for (i = 0; i <= 20; i++) {
-    ecs[i] = srr;
-    if ((srr & 0x01) != 0) srr = (srr >> 1) ^ 0x3B4;
-    else                   srr = srr >> 1;
-  }
-
-  // bch holds a syndrome look-up table telling which bits to correct
-  // first 5 bits hold location of first error; next 5 bits hold location
-  // of second error; bits 12 & 13 tell how many bits are bad
-  for (i = 0; i < 255; i++) bch[i] = 0;
-
-  for (n = 0; n <= 20; n++) { // two errors in data
-    for (i = 0; i <= 20; i++) {
-      j = (i << 5) + n;
-      k = ecs[n] ^ ecs[i];
-      bch[k] = j + 0x2000;
-    }
-  }
-
-  // one error in data
-  for (n = 0; n <= 20; n++) {
-    k = ecs[n];
-    j = n + (0x1f << 5);
-    bch[k] = j + 0x1000;
-  }
-
-  // one error in data and one error in ecc portion
-  for (n = 0; n <= 20; n++) {
-    for (i = 0; i < 10; i++) {// ecc screwed up bit
-      k = ecs[n] ^ (1 << i);
-      j = n + (0x1f << 5);
-      bch[k] = j + 0x2000;
-    }
-  }
-
-  // one error in ecc
-  for (n = 0; n < 10; n++) {
-    k = 1 << n;
-    bch[k] = 0x3ff + 0x1000;
-  }
-
-  // two errors in ecc
-  for (n = 0; n < 10; n++) {
-    for (i = 0; i < 10; i++) {
-      if (i != n) {
-        k = (1 << n) ^ (1 << i);
-        bch[k] = 0x3ff + 0x2000;
-      }
-    }
-  }
-}
 
 
