@@ -59,7 +59,6 @@ byte cw[32];
 unsigned int bch[1025], ecs[25];
 unsigned long last_pmb_millis = 0;
 bool field_strength_alarm = false;
-bool enable_fsa = false;
 byte fsa_timeout_minutes = 10;
 
 //RTC Variablen
@@ -74,6 +73,7 @@ void setup()
   pinMode(receiverPin, INPUT);
   pinMode(pmbledPin, OUTPUT);
   pinMode(syncledPin, OUTPUT);
+  pinMode(fsaledPin, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
   Wire.begin();
@@ -100,7 +100,7 @@ void loop() {
       if (buffer == prmbWord) {
         state = STATE_WAIT_FOR_SYNC;
         if (enable_led) enable_pmbled();
-        if (enable_fsa) {
+        if (fsa_timeout_minutes > 0) {
           last_pmb_millis = millis();
           if (enable_led && field_strength_alarm) disable_fsaled();
           field_strength_alarm = false;
@@ -159,7 +159,7 @@ void loop() {
     case STATE_PROCESS_MESSAGE:
       stop_flank();
       stop_timer();
-
+ 
       decode_wordbuffer();
 
       memset(wordbuffer, 0, sizeof(wordbuffer));
@@ -170,11 +170,11 @@ void loop() {
       break;
   }
 
-  if (enable_fsa) {
+  if (fsa_timeout_minutes > 0) {
     if (last_pmb_millis > millis())
       last_pmb_millis = millis();
-    if (!field_strength_alarm && millis() - last_pmb_millis > fsa_timeout_minutes * 60 * 1000) {
-      Serial.println("\r\n+++ Field Strength Alarm! +++");
+    if (!field_strength_alarm && (last_pmb_millis == 0 || millis() - last_pmb_millis > fsa_timeout_minutes*60000)) {
+      Serial.println("\r\n=== [" + strRTCDateTime() + "] +++ Field Strength Alarm! +++");
       field_strength_alarm = true;
       if (enable_led) enable_fsaled();
     }

@@ -73,12 +73,12 @@ void disable_syncled()
 
 void enable_fsaled()
 {
-  SET(PORTH, fsaledPin - 3);
+  SET(PORTB, fsaledPin - 6);
 }
 
 void disable_fsaled()
 {
-  CLR(PORTH, fsaledPin - 3);
+  CLR(PORTB, fsaledPin - 6);
 }
 unsigned long extract_address(int idx) {
   unsigned long address = 0;
@@ -173,8 +173,12 @@ void print_message(unsigned long s_address, byte function, char message[MSGLENGT
 void init_led() {
   for (int i = 0; i < 5; i++) {
     enable_pmbled();
+    enable_syncled();
+    enable_fsaled();
     delay(100);
     disable_pmbled();
+    disable_syncled();
+    disable_fsaled();
     delay(100);
   }
   disable_pmbled();

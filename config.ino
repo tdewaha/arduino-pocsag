@@ -5,7 +5,7 @@ void print_config() {
   if (ecc_mode == 2) strecc =                         F("ECC-Mode               2 bit");
   if (ecc_mode == 3) strecc =                         F("ECC-Mode               >2 bit");
   String strled =  ((enable_led == true) ?            F("LED                    ON")     : F("LED                    OFF"));
-  String strfsa =  ((enable_fsa == true) ?       String("Field Strength Alarm   ON (" + String(fsa_timeout_minutes) + " min.)")     : F("Field Strength Alarm   OFF"));
+  String strfsa =  ((fsa_timeout_minutes >0) ?   String("Field Strength Alarm   ON (" + String(fsa_timeout_minutes) + " min.)")     : F("Field Strength Alarm   OFF"));
   String strdebug =                                   F("Debug Level            OFF (0)");
   if (debugLevel == 1) strdebug =                     F("Debug Level            CW 0+1 ");
   if (debugLevel == 2) strdebug =                     F("Debug Level            ALL (2)");
@@ -109,5 +109,4 @@ void eeprom_read() {
   enable_led = EEPROM.read(3);
   invert_signal = EEPROM.read(4);
   fsa_timeout_minutes = EEPROM.read(5);
-  enable_fsa = (fsa_timeout_minutes != 0);
 }
