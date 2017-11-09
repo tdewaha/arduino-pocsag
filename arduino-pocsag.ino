@@ -23,6 +23,7 @@
 #define receiverPin                   	19
 #define pmbledPin         	             8
 #define syncledPin                       9
+#define fsaledPin                       10
 #define bitPeriod                      833
 #define halfBitPeriod                  416
 #define halfBitPeriodTolerance          30
@@ -35,9 +36,11 @@
 #define STATE_PROCESS_BATCH 	  2
 #define STATE_PROCESS_MESSAGE 	3
 
-#define MSGLENGTH 	        240
-#define BITCOUNTERLENGTH	  540
-#define MAXNUMBATCHES		     14
+#define MSGLENGTH 	                240
+#define BITCOUNTERLENGTH	          440
+#define MAXNUMBATCHES		             14
+#define MAXDECODEERRORCOUNT           8
+
 static const char *functions[4] = {"A", "B", "C", "D"};
 
 volatile unsigned long buffer = 0;
@@ -52,44 +55,43 @@ byte ecc_mode = 0;
 bool enable_led = false;
 byte invert_signal = RISING;
 unsigned long wordbuffer[(MAXNUMBATCHES * 16) + 1];
-byte ob[32];
+byte cw[32];
 unsigned int bch[1025], ecs[25];
-byte decode_errorcount = 0;
-byte decode_errorcount_max = 3;
+unsigned long last_pmb_millis = 0;
+bool field_strength_alarm = false;
+bool enable_fsa = false;
+byte fsa_timeout_minutes = 10;
 
 //RTC Variablen
 int jahr, monat, tag, stunde, minute, sekunde, wochentag;
 int daysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-char serbuf[30];
-byte serbufcounter = 0;
+char serialbuffer[30];
+byte serialbuffer_counter = 0;
 
 void setup()
 {
-  Wire.begin();
   pinMode(receiverPin, INPUT);
   pinMode(pmbledPin, OUTPUT);
   pinMode(syncledPin, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
+  Wire.begin();
 
   Serial.begin(115200);
   Serial.println();
 
-  Serial.println(F("START POCSAG DECODER"));
+  Serial.println("START POCSAG DECODER");
 
-  enable_paritycheck = EEPROM.read(0);
-  debugLevel = EEPROM.read(1);
-  ecc_mode = EEPROM.read(2);
-  enable_led = EEPROM.read(3);
-  invert_signal = EEPROM.read(4);
+  eeprom_read();
+
   if (ecc_mode > 0) setupecc();
+
   print_config();
-  disable_syncled();
-  disable_pmbled();
   start_flank();
   Timer1.initialize(bitPeriod);
   Serial.println(strRTCDateTime());
+  init_led();
 }
 
 void loop() {
@@ -98,6 +100,11 @@ void loop() {
       if (buffer == prmbWord) {
         state = STATE_WAIT_FOR_SYNC;
         if (enable_led) enable_pmbled();
+        if (enable_fsa) {
+          last_pmb_millis = millis();
+          if (enable_led && field_strength_alarm) disable_fsaled();
+          field_strength_alarm = false;
+        }
       }
       break;
 
@@ -163,15 +170,26 @@ void loop() {
       break;
   }
 
+  if (enable_fsa) {
+    if (last_pmb_millis > millis())
+      last_pmb_millis = millis();
+    if (!field_strength_alarm && millis() - last_pmb_millis > fsa_timeout_minutes * 60 * 1000) {
+      Serial.println("\r\n+++ Field Strength Alarm! +++");
+      field_strength_alarm = true;
+      if (enable_led) enable_fsaled();
+    }
+  }
+
+
   if (Serial.available()) {
     while (Serial.available()) {
-      serbuf[serbufcounter] = Serial.read();
-      Serial.print(serbuf[serbufcounter]);
-      if (serbuf[serbufcounter] == '\r') {
+      serialbuffer[serialbuffer_counter] = Serial.read();
+      Serial.print(serialbuffer[serialbuffer_counter]);
+      if (serialbuffer[serialbuffer_counter] == '\r' || serialbuffer[serialbuffer_counter] == '\n') {
         process_serial_input();
-        memset(serbuf, 0, sizeof(serbuf));
-        serbufcounter = 0;
-      } else if (serbufcounter < sizeof(serbuf) - 1) serbufcounter++;
+        memset(serialbuffer, 0, sizeof(serialbuffer));
+        serialbuffer_counter = 0;
+      } else if (serialbuffer_counter < sizeof(serialbuffer) - 1) serialbuffer_counter++;
     }
   }
 }
@@ -184,45 +202,50 @@ void decode_wordbuffer() {
   memset(function, 0, sizeof(function));
   char message[MSGLENGTH];
   memset(message, 0, sizeof(message));
-
   byte character = 0;
   int bcounter = 0;
   int ccounter = 0;
+  int used_cw_counter = 0;
   boolean eot = false;
+  unsigned long start_millis = millis();
+  byte decode_errorcount = 0;
 
   for (int i = 0; i < ((MAXNUMBATCHES * 16) + 1); i++) {
     if (wordbuffer[i] == 0) continue;
     if (debugLevel > 0) {
       if (debugLevel == 2 || (debugLevel == 1 && i < 2))
-        Serial.print(String(F("\r\nwordbuffer[")) + String(i) + F("] = ") + String(wordbuffer[i]) + F(";"));
+        Serial.print("\r\nwordbuffer[" + String(i) + "] = " + String(wordbuffer[i]) + ";");
     }
+
+    used_cw_counter++;
 
     if (wordbuffer[i] == idleWord) continue;
 
     if (enable_paritycheck) {
       if (parity(wordbuffer[i]) == 1) {
-        if (debugLevel == 2) Serial.println(String(F("wordbuffer[")) + String(i) + F("] = ") + String(wordbuffer[i]) + F("; PE"));
+        if (debugLevel == 2) Serial.println("wordbuffer[" + String(i) + "] = " + String(wordbuffer[i]) + "; PE");
         continue;
       }
     }
 
     if (ecc_mode > 0) {
       unsigned long preEccWb = wordbuffer[i];
-      for (int obcnt = 0; obcnt < 32; obcnt++)
-        ob[obcnt] = bitRead(wordbuffer[i], 31 - obcnt);
+      for (int cw_bcounter = 0; cw_bcounter < 32; cw_bcounter++)
+        cw[cw_bcounter] = bitRead(wordbuffer[i], 31 - cw_bcounter);
 
       int ecdcount = ecd();
 
       if (ecdcount == 3) decode_errorcount++;
 
-      if (decode_errorcount >= decode_errorcount_max) {
-        Serial.print("\r\ndecode_wordbuffer process cancelled! too much errors. errorcount > " + String(decode_errorcount_max));
+      if (decode_errorcount >= MAXDECODEERRORCOUNT) {
+        if (debugLevel == 2)
+          Serial.print("\r\ndecode_wordbuffer process cancelled! too much errors. errorcount > " + String(MAXDECODEERRORCOUNT));
         break;
       }
 
       if (ecdcount < ecc_mode + 1)
-        for (int obcnt = 0; obcnt < 32; obcnt++)
-          bitWrite(wordbuffer[i], 31 - obcnt, (int)ob[obcnt]);
+        for (int cw_bcounter = 0; cw_bcounter < 32; cw_bcounter++)
+          bitWrite(wordbuffer[i], 31 - cw_bcounter, (int)cw[cw_bcounter]);
 
       if (debugLevel > 1) {
         Serial.print(" // (" + String(ecdcount) + ") ");
@@ -232,9 +255,9 @@ void decode_wordbuffer() {
     }
 
     if (bitRead(wordbuffer[i], 31) == 0) {
-      if  ((i > 0 && wordbuffer[i - 1] == idleWord || address_counter == 0) && (parity(wordbuffer[i]) != 1)) {
+      if  ((i > 0 || address_counter == 0) && (parity(wordbuffer[i]) != 1)) {
         address[address_counter] = extract_address(i);
-        if (debugLevel == 2) Serial.print(" //" + String(F("Adresse ")) + String(address[address_counter]) + F(" gefunden, address_counter = ") + String(address_counter));
+        if (debugLevel == 2) Serial.print(" //Adresse " + String(address[address_counter]) + " gefunden, address_counter = " + String(address_counter));
         function[address_counter] = extract_function(i);
         if (address_counter > 0) {
           print_message(address[address_counter - 1], function[address_counter - 1], message);
@@ -266,11 +289,9 @@ void decode_wordbuffer() {
     }
   }
 
-  decode_errorcount = 0;
-
   if (address_counter > 0) {
     print_message(address[address_counter - 1], function[address_counter - 1], message);
-    if (debugLevel == 2)  Serial.print(String(F("\r\naddress_counter = ")) + String(address_counter));
+    if (debugLevel == 2)  Serial.print("\r\naddress_counter = " + String(address_counter));
   }
-  Serial.println("\r\n======== [" + strRTCDateTime() + "] ========");
+  Serial.print("\r\n=== [" + strRTCDateTime() + "] CW(" + String(used_cw_counter) + ") " + String(millis() - start_millis) + "ms ===");
 }

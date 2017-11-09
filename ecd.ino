@@ -16,7 +16,7 @@ byte ecd() {
   int acc = 0;
 
   for (i = 0; i <= 20; i++) {
-    if (ob[i] == 1)
+    if (cw[i] == 1)
     {
       ecc = ecc ^ ecs[i];
       parity = parity ^ 0x01;
@@ -25,7 +25,7 @@ byte ecd() {
 
   for (i = 21; i <= 30; i++) {
     acc = acc << 1;
-    if (ob[i] == 1) acc = acc ^ 0x01;
+    if (cw[i] == 1) acc = acc ^ 0x01;
   }
 
   synd = ecc ^ acc;
@@ -37,12 +37,12 @@ byte ecd() {
       b2 = b2 & 0x1f;
 
       if (b2 != 0x1f) {
-        ob[b2] = ob[b2] ^ 0x01;
+        cw[b2] = cw[b2] ^ 0x01;
         ecc = ecc ^ ecs[b2];
       }
 
       if (b1 != 0x1f) {
-        ob[b1] = ob[b1] ^ 0x01;
+        cw[b1] = cw[b1] ^ 0x01;
         ecc = ecc ^ ecs[b1];
       }
       errors = bch[synd] >> 12;
@@ -54,7 +54,7 @@ byte ecd() {
 
   parity = (parity + bit10(ecc)) & 0x01;
 
-  if (parity != ob[31]) errors++;
+  if (parity != cw[31]) errors++;
 
   if (errors > 3) errors = 3;
 
