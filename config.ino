@@ -38,7 +38,7 @@ void process_serial_input() {
       return;
     }
     if (strstr(serialbuffer, "h") || strstr(serialbuffer, "?")) 
-      Serial.println(F("******** help config ********\r\np0/1    = Parity Check dis-/enabled\r\nd0/1/2  = Debug Level\r\ne0/1    = ECC dis-/enabled\r\nl0/1    = LEDs dis-/enabled\r\ni0/1    = Input normal/inverted\r\nftnnn   = Field Strength Alarm (nnn minutes; 0 = off)\r\ntime    = time dd.mm.yyyy hh:mm:ss"));
+      Serial.println(F("******** help config ********\r\np0/1      = Parity Check dis-/enabled\r\nd0/1/2    = Debug Level\r\ne0/1/2/3  = ECC (0) disabled, (1) 1 Bit, (2) 2 Bit, (3) >2 Bit\r\nl0/1      = LEDs dis-/enabled\r\ni0/1      = Input normal/inverted\r\nftnnn     = Field Strength Alarm (nnn minutes; 0 = off)\r\ntime      = time dd.mm.yyyy hh:mm:ss"));
     if (strstr(serialbuffer, "p0")) {
       EEPROM.write(0, false);
       enable_paritycheck = false;
