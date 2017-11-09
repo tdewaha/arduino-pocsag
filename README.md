@@ -24,8 +24,8 @@ To show configuration help, type "sh" in a serial terminal (115200 baud).
 | p0 | Parity Check disabled |
 | p1 | Parity Check enabled |
 | d0 | Debug Output OFF |
-| d1 | Debug Level MINOR|
-| d2 | Debug Level ALL|
+| d1 | Debug Output CodeWords 1+2|
+| d2 | Debug Output All Codewords|
 | e0 | Error Correction disabled |
 | e1 | Error Correction 1 Bit Errors |
 | e2 | Error Correction 2 Bit Errors |
@@ -33,6 +33,6 @@ To show configuration help, type "sh" in a serial terminal (115200 baud).
 | l0 | LEDs disabled |
 | l1 | LEDs enabled |
 | i0 | Input normal |
-| i1 | Input inverted |
+| i1 | Input inverted (used for LX4 receiver board!)|
 | ftnnn | Field Strength Alarm (nnn minutes; 0 = off) |
 | time | set time = time dd.mm.yyyy hh:mm:ss |
