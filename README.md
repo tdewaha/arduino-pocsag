@@ -3,7 +3,7 @@ Arduino based POCSAG decoder using the frequency shift keying demodulator on Mot
 
 Tested successfully with up to 1200 baud POCSAG.
 
-Designed for Arduino Mega2560 and DS3231 RTC
+Designed for Arduino Mega2560 and optional DS3231 RTC
 
 | pin | used for |
 |----------|-------------|
@@ -23,6 +23,8 @@ To show configuration help, type "sh" in a serial terminal (115200 baud).
 |----------|-------------|
 | p0 | Parity Check disabled |
 | p1 | Parity Check enabled |
+| c0 | Real Time Clock disabled / not installed |
+| c1 | Real Time Clock enabled |
 | d0 | Debug Output OFF |
 | d1 | Debug Output CodeWords 1+2|
 | d2 | Debug Output All Codewords|
