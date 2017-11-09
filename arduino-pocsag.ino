@@ -39,7 +39,6 @@
 #define MSGLENGTH 	                240
 #define BITCOUNTERLENGTH	          440
 #define MAXNUMBATCHES		             14
-#define MAXDECODEERRORCOUNT           8
 
 static const char *functions[4] = {"A", "B", "C", "D"};
 
@@ -61,6 +60,7 @@ unsigned int bch[1025], ecs[25];
 unsigned long last_pmb_millis = 0;
 bool field_strength_alarm = false;
 byte fsa_timeout_minutes = 10;
+byte max_allowd_cw_errors = 8;
 
 //RTC Variablen
 int jahr, monat, tag, stunde, minute, sekunde, wochentag;
@@ -239,9 +239,9 @@ void decode_wordbuffer() {
 
       if (ecdcount == 3) decode_errorcount++;
 
-      if (decode_errorcount >= MAXDECODEERRORCOUNT) {
+      if (decode_errorcount >= max_allowd_cw_errors) {
         if (debugLevel == 2)
-          Serial.print("\r\ndecode_wordbuffer process cancelled! too much errors. errorcount > " + String(MAXDECODEERRORCOUNT));
+          Serial.print("\r\ndecode_wordbuffer process cancelled! too much errors. errorcount > " + String(max_allowd_cw_errors));
         break;
       }
 
@@ -259,7 +259,7 @@ void decode_wordbuffer() {
     if (bitRead(wordbuffer[i], 31) == 0) {
       if  ((i > 0 || address_counter == 0) && (parity(wordbuffer[i]) != 1)) {
         address[address_counter] = extract_address(i);
-        if (debugLevel == 2) Serial.print(" //Adresse " + String(address[address_counter]) + " gefunden, address_counter = " + String(address_counter));
+        if (debugLevel == 2) Serial.print(" //address " + String(address[address_counter]) + " found, address_counter = " + String(address_counter));
         function[address_counter] = extract_function(i);
         if (address_counter > 0) {
           print_message(address[address_counter - 1], function[address_counter - 1], message);

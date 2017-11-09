@@ -12,7 +12,7 @@ void print_config() {
   if (debugLevel == 2) strdebug =                     F("Debug Level            ALL (2)");
   String strinvert =  ((invert_signal == FALLING) ?   F("Input Level            NORMAL") : F("Input Level            INV."));
 
-  Serial.println(String(F("******** current config ********\r\n")) + strpcheck + F("\r\n") + strdebug + F("\r\n") + strecc + F("\r\n") + strled + F("\r\n") + strinvert + F("\r\n") + strfsa+ F("\r\n") + strrtc);
+  Serial.println(String(F("******** current config ********\r\n")) + strpcheck + F("\r\n") + strdebug + F("\r\n") + strecc + F("\r\n") + strled + F("\r\n") + strinvert + F("\r\n") + strfsa + F("\r\n") + strrtc);
 }
 
 void process_serial_input() {
@@ -29,17 +29,17 @@ void process_serial_input() {
 
         if (!checkDateTime(jahr, monat, tag, stunde, minute, sekunde)) {
           Serial.println(serialbuffer);
-          Serial.println(F("Beispiel: time 08.11.2017 10:54:00"));
+          Serial.println(F("Example: time 08.11.2017 10:54:00"));
           return;
         }
         rtcWriteTime(jahr, monat, tag, stunde, minute, sekunde);
-        Serial.println(F("Zeit und Datum wurden auf neue Werte gesetzt."));
+        Serial.println(F("Time and Date set."));
       }
       Serial.println(strRTCDateTime());
       return;
     }
     if (strstr(serialbuffer, "h") || strstr(serialbuffer, "?"))
-      Serial.println(F("******** help config ********\r\nc0/1      = Real Time Clock dis-/enabled\r\np0/1      = Parity Check dis-/enabled\r\nd0/1/2    = Debug Level\r\ne0/1/2/3  = ECC (0) disabled, (1) 1 Bit, (2) 2 Bit, (3) >2 Bit\r\nl0/1      = LEDs dis-/enabled\r\ni0/1      = Input normal/inverted\r\nftnnn     = Field Strength Alarm (nnn minutes; 0 = off)\r\ntime      = time dd.mm.yyyy hh:mm:ss"));
+      Serial.println(F("******** help config ********\r\nc0/1      = Real Time Clock dis-/enabled\r\np0/1      = Parity Check dis-/enabled\r\nd0/1/2    = Debug Level\r\ne0/1/2/3  = ECC (0) disabled, (1) 1 Bit, (2) 2 Bit, (3) >2 Bit\r\nl0/1      = LEDs dis-/enabled\r\ni0/1      = Input normal/inverted\r\nftnnn     = Field Strength Alarm (nnn minutes; 0 = off)\r\nmenn     = max. allowed codewords with errors\r\ntime      = time dd.mm.yyyy hh:mm:ss"));
     if (strstr(serialbuffer, "p0")) {
       EEPROM.write(0, false);
       enable_paritycheck = false;
@@ -106,6 +106,10 @@ void process_serial_input() {
       EEPROM.write(6, true);
       enable_rtc = true;
     }
+    if (strstr(serialbuffer, "me")) {
+      max_allowd_cw_errors = getIntFromString(serialbuffer, 1);
+      EEPROM.write(7, max_allowd_cw_errors);
+    }
     eeprom_read();
     print_config();
   }
@@ -119,5 +123,5 @@ void eeprom_read() {
   invert_signal = EEPROM.read(4);
   fsa_timeout_minutes = EEPROM.read(5);
   enable_rtc = EEPROM.read(6);
-
+  max_allowd_cw_errors = EEPROM.read(7);
 }
