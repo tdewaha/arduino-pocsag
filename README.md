@@ -37,4 +37,5 @@ To show configuration help, type "sh" in a serial terminal (115200 baud).
 | i0 | Input normal |
 | i1 | Input inverted (used for LX4 receiver board!)|
 | ftnnn | Field Strength Alarm (nnn minutes; 0 = off) |
+| menn | max. number of allowed codewords with incorrectable errors |
 | time | set time = time dd.mm.yyyy hh:mm:ss |
