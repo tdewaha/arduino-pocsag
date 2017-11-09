@@ -35,4 +35,4 @@ To show configuration help, type "sh" in a serial terminal (115200 baud).
 | i0 | Input normal |
 | i1 | Input inverted |
 | ftnnn | Field Strength Alarm (nnn minutes; 0 = off) |
-| time | time dd.mm.yyyy hh:mm:ss |
+| time | set time = time dd.mm.yyyy hh:mm:ss |
