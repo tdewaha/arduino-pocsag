@@ -14,11 +14,11 @@ void rtcReadTime() {
 
 void rtcWriteTime(int jahr, int monat, int tag, int stunde, int minute, int sekunde) {
   Wire.beginTransmission(RTC_I2C_ADDRESS);
-  Wire.write(0); 
+  Wire.write(0);
   Wire.write(decToBcd(sekunde));
   Wire.write(decToBcd(minute));
   Wire.write(decToBcd(stunde));
-  Wire.write(decToBcd(0)); 
+  Wire.write(decToBcd(0));
   Wire.write(decToBcd(tag));
   Wire.write(decToBcd(monat));
   Wire.write(decToBcd(jahr - 2000));
@@ -53,35 +53,37 @@ int getIntFromString (char *stringWithInt, byte num) {
 }
 
 String strRTCDateTime() {
-  rtcReadTime();
-  String result = "";
-  if (tag < 10) {
-    result += "0";
-  }
-  result += tag;
-  result += ".";
-  if (monat < 10) {
-    result += "0";
-  }
-  result += monat;
-  result += ".";
-  result += jahr;
-  result += " ";
-  if (stunde < 10) {
-    result += "0";
-  }
-  result += stunde;
-  result += ":";
-  if (minute < 10) {
-    result += "0";
-  }
-  result += minute;
-  result += ":";
-  if (sekunde < 10) {
-    result += "0";
-  }
-  result += sekunde;
-  return result;
+  if (enable_rtc) {
+    rtcReadTime();
+    String result = "";
+    if (tag < 10) {
+      result += "0";
+    }
+    result += tag;
+    result += ".";
+    if (monat < 10) {
+      result += "0";
+    }
+    result += monat;
+    result += ".";
+    result += jahr;
+    result += " ";
+    if (stunde < 10) {
+      result += "0";
+    }
+    result += stunde;
+    result += ":";
+    if (minute < 10) {
+      result += "0";
+    }
+    result += minute;
+    result += ":";
+    if (sekunde < 10) {
+      result += "0";
+    }
+    result += sekunde;
+    return result;
+  } else return "00.00.0000 00:00:00";
 }
 
 boolean checkDateTime(int jahr, int monat, int tag, int stunde, int minute, int sekunde) {

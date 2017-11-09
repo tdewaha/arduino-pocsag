@@ -53,6 +53,7 @@ byte debugLevel = 0;
 bool enable_paritycheck = false;
 byte ecc_mode = 0;
 bool enable_led = false;
+bool enable_rtc = false;
 byte invert_signal = RISING;
 unsigned long wordbuffer[(MAXNUMBATCHES * 16) + 1];
 byte cw[32];
@@ -76,7 +77,6 @@ void setup()
   pinMode(fsaledPin, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
-  Wire.begin();
 
   Serial.begin(115200);
   Serial.println();
@@ -84,6 +84,8 @@ void setup()
   Serial.println("START POCSAG DECODER");
 
   eeprom_read();
+
+  if (enable_rtc) Wire.begin();
 
   if (ecc_mode > 0) setupecc();
 
